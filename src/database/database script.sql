@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`member` (
   `pass_reset_token` VARCHAR(255) NULL DEFAULT NULL,
   `pass_reset_expired_dt` DATETIME NULL DEFAULT NULL,
   `photo` VARCHAR(255) NULL DEFAULT NULL,
+  `address` VARCHAR(255) NULL DEFAULT NULL,
+  `country` VARCHAR(255) NULL DEFAULT NULL,
   `title` VARCHAR(150) NULL DEFAULT NULL,
   `speciality` VARCHAR(255) NULL DEFAULT NULL,
   `hobby` MEDIUMTEXT NULL DEFAULT NULL,
@@ -104,6 +106,8 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`donor` (
   `pass_reset_token` VARCHAR(255) NOT NULL,
   `pass_reset_expired_dt` DATETIME NULL DEFAULT NULL,
   `photo` VARCHAR(255) NULL DEFAULT NULL,
+  `address` VARCHAR(255) NULL DEFAULT NULL,
+  `country` VARCHAR(255) NULL DEFAULT NULL,
   `is_firm` TINYINT NULL DEFAULT NULL,
   `created_date` DATE NULL,
   PRIMARY KEY (`id`))

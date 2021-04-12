@@ -45,6 +45,12 @@ module.exports = {
 			photo: {
 				type: Sequelize.STRING(255)
 			},
+			address: {
+				type: Sequelize.STRING(255)
+			},
+			country: {
+				type: Sequelize.STRING(255)
+			},
 			firm: {
 				type: Sequelize.STRING(150)
 			},
