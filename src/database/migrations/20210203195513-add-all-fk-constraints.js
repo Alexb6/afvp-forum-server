@@ -4,7 +4,7 @@ module.exports = {
 	up: async (queryInterface, Sequelize) => {
 		try {
 			await queryInterface.sequelize.transaction(async t => {
-				const x = await queryInterface.addConstraint('members', {
+				await queryInterface.addConstraint('members', {
 					fields: ['role_id'],
 					type: 'foreign key',
 					name: 'fk_memb_roles_id_idx',
@@ -85,6 +85,15 @@ module.exports = {
 					onDelete: 'CASCADE',
 					transaction: t
 				});
+				await queryInterface.addConstraint('donors', {
+					fields: ['role_id'],
+					type: 'foreign key',
+					name: 'fk_dono_roles_id_idx',
+					references: { table: 'roles', field: 'id' },
+					onUpdate: 'CASCADE',
+					onDelete: 'SET NULL',
+					transaction: t
+				});
 			});
 		} catch (err) {
 			console.log('Transaction has been rolled back!');
@@ -103,6 +112,7 @@ module.exports = {
 				await queryInterface.removeConstraint('donations', 'fk_dona_paymenttypes_id_idx');
 				await queryInterface.removeConstraint('donations', 'fk_dona_donors_id_idx');
 				await queryInterface.removeConstraint('donations', 'fk_dona_members_id_idx');
+				await queryInterface.removeConstraint('donors', 'fk_dono_roles_id_idx');
 			});
 		} catch (err) {
 			console.log('Transaction has been rolled back!');

@@ -6,6 +6,7 @@ module.exports = (sequelize, DataTypes) => {
 	class Donor extends Model {
 		static associate(models) {
 			this.belongsTo(models.Donation, {foreignKey: 'donor_id'});
+			this.belongsTo(models.Role, { foreignKey: 'role_id' });
 		}
 	};
 	Donor.init({
@@ -91,6 +92,14 @@ module.exports = (sequelize, DataTypes) => {
 		},
 		firm: {
 			type: DataTypes.STRING
+		},
+		role_id: {
+			allowNull: false,
+			type: DataTypes.UUID,
+			validate: {
+				notNull: true,
+				isUUID: 4
+			}
 		},
 		created_at: {
 			allowNull: false,

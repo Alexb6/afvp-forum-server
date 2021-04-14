@@ -54,6 +54,9 @@ module.exports = {
 			firm: {
 				type: Sequelize.STRING(150)
 			},
+			role_id: {
+				type: Sequelize.UUID
+			},
 			created_at: {
 				allowNull: false,
 				type: Sequelize.DATE

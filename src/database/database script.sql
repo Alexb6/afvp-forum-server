@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`donor` (
   `address` VARCHAR(255) NULL DEFAULT NULL,
   `country` VARCHAR(255) NULL DEFAULT NULL,
   `is_firm` TINYINT NULL DEFAULT NULL,
+  `role_id` INT(11) NOT NULL,
   `created_date` DATE NULL,
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
@@ -179,6 +180,9 @@ ALTER TABLE `afvp_site`.`donation`
 ALTER TABLE `afvp_site`.`donation`
   ADD INDEX `fk_dona_paym_id_idx` (`payment_type_id` ASC);
 
+ALTER TABLE `afvp_site`.`donor`
+  ADD INDEX `fk_dono_role_id_idx` (`role_id` ASC);
+
 -- -----------------------------------------------------
 -- Foreign Keys creation
 -- -----------------------------------------------------
@@ -209,3 +213,5 @@ ALTER TABLE `afvp_site`.`donation`
 ALTER TABLE `afvp_site`.`donation`
   ADD CONSTRAINT `fk_dona_paym_id_idx` FOREIGN KEY (`payment_type_id`) REFERENCES `afvp_site`.`payment_type` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE `afvp_site`.`donor`
+  ADD CONSTRAINT `fk_dono_role_id_idx` FOREIGN KEY (`role_id`) REFERENCES `afvp_site`.`role` (`id`) ON DELETE CASCADE  ON UPDATE CASCADE;
