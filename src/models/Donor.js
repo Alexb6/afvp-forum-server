@@ -21,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
 				isUUID: 4
 			}
 		},
+		gender: {
+			allowNull: false,
+			type: DataTypes.ENUM('Mr', 'Mrs')
+		},
 		first_name: {
 			allowNull: false,
 			type: DataTypes.STRING,

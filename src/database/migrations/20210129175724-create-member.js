@@ -71,6 +71,14 @@ module.exports = {
 				type: Sequelize.DATE,
 				comment: 'Membership active limit date'
 			},
+			is_active: {
+				type: Sequelize.BOOLEAN,
+				comment: 'Membership disabling'
+			},
+			status: {
+				type: Sequelize.ENUM('tovalidate', 'inregistration', 'registered', 'rejected'),
+				comment: 'Statuses for the membership application process'
+			},
 			donor: {
 				type: Sequelize.BOOLEAN
 			},

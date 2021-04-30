@@ -24,6 +24,10 @@ module.exports = (sequelize, DataTypes) => {
 				isUUID: 4
 			}
 		},
+		gender: {
+			allowNull: false,
+			type: DataTypes.ENUM('Mr', 'Mrs')
+		},
 		first_name: {
 			allowNull: false,
 			type: DataTypes.STRING,
@@ -100,10 +104,16 @@ module.exports = (sequelize, DataTypes) => {
 			type: DataTypes.TEXT
 		},
 		subscription_dt: {
-			type: DataTypes.DATE,
+			type: DataTypes.DATE
 		},
 		active_dt: {
-			type: DataTypes.DATE,
+			type: DataTypes.DATE
+		},
+		is_active: {
+			type: DataTypes.BOOLEAN
+		},
+		status: {
+			type: DataTypes.ENUM('tovalidate', 'inregistration', 'registered', 'rejected')
 		},
 		donor: {
 			type: DataTypes.BOOLEAN

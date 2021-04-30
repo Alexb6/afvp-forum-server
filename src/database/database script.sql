@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`member` (
   `created_dt` DATE NULL DEFAULT NULL COMMENT 'Date of the request to join the association',
   `subscription_dt` DATE NULL DEFAULT NULL COMMENT 'Membership payment date',
   `active_limit_dt` DATE NULL DEFAULT NULL COMMENT 'Membership active limit date',
+  `is_active` TINYINT NULL DEFAULT NULL COMMENT 'Membership disabling',
+  `status` ENUM('tovalidate', 'inregistration', 'registered', 'rejected') NOT NULL COMMENT 'Statuses for the membership application process',
   `donor` TINYINT NULL DEFAULT NULL,
   `role_id` INT(11) NOT NULL,
   `subscription_id` INT(11) NOT NULL,
