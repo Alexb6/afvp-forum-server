@@ -8,3 +8,6 @@
 .DS_Store
 .env
 
+# sequelize seeds
+/src/database/seeds/roles_seeds.js
+/src/database/seeds/subscription_types_seeds.js
