@@ -60,6 +60,9 @@ module.exports = {
 			speciality: {
 				type: Sequelize.STRING(255)
 			},
+			biography: {
+				type: Sequelize.TEXT('medium')
+			},
 			hobby: {
 				type: Sequelize.TEXT('medium')
 			},

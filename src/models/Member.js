@@ -100,6 +100,9 @@ module.exports = (sequelize, DataTypes) => {
 		speciality: {
 			type: DataTypes.STRING
 		},
+		biography: {
+			type: DataTypes.TEXT
+		},
 		hobby: {
 			type: DataTypes.TEXT
 		},
@@ -113,7 +116,8 @@ module.exports = (sequelize, DataTypes) => {
 			type: DataTypes.BOOLEAN
 		},
 		status: {
-			type: DataTypes.ENUM('tovalidate', 'inregistration', 'registered', 'rejected')
+			type: DataTypes.ENUM('tovalidate', 'inregistration', 'registered', 'rejected'),
+			defaultValue: 'tovalidate'
 		},
 		donor: {
 			type: DataTypes.BOOLEAN
