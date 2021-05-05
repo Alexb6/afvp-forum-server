@@ -101,10 +101,10 @@ module.exports = (sequelize, DataTypes) => {
 			type: DataTypes.STRING
 		},
 		biography: {
-			type: DataTypes.TEXT
+			type: DataTypes.STRING
 		},
 		hobby: {
-			type: DataTypes.TEXT
+			type: DataTypes.STRING
 		},
 		subscription_dt: {
 			type: DataTypes.DATE

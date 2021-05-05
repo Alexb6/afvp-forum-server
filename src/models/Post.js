@@ -46,7 +46,7 @@ module.exports = (sequelize, DataTypes) => {
 		},
 		body: {
 			allowNull: false,
-			type: DataTypes.TEXT('long'),
+			type: DataTypes.STRING,
 			validate: {
 				notNull: true
 			}
