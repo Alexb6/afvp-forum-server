@@ -5,7 +5,7 @@ const {
 module.exports = (sequelize, DataTypes) => {
 	class Donation extends Model {
 		static associate(models) {
-			this.hasMany(models.Member, { foreignKey: 'donor_id' });
+			this.hasMany(models.Member, { foreignKey: 'member_id' });
 			this.hasMany(models.Donor, { foreignKey: 'donor_id' });
 			this.belongsTo(models.PaymentType, { foreignKey: 'payment_id' });
 		}
@@ -37,6 +37,14 @@ module.exports = (sequelize, DataTypes) => {
 			}
 		},
 		payment_id: {
+			allowNull: false,
+			type: DataTypes.UUID,
+			validate: {
+				notNull: true,
+				isUUID: 4
+			}
+		},
+		member_id: {
 			allowNull: false,
 			type: DataTypes.UUID,
 			validate: {

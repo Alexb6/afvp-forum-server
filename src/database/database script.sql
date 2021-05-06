@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`donation` (
   `date` DATETIME NOT NULL,
   `amount` DECIMAL(10,2) NOT NULL,
   `payment_type_id` INT NOT NULL,
+  `member_id` INT NOT NULL,
   `donor_id` INT NOT NULL,
   PRIMARY KEY (`id`)
 )
@@ -180,6 +181,9 @@ ALTER TABLE `afvp_site`.`donation`
   ADD INDEX `fk_dona_donor_id_idx` (`donor_id` ASC);
 
 ALTER TABLE `afvp_site`.`donation`
+  ADD INDEX `fk_dona_member_id_idx` (`donor_id` ASC);
+
+ALTER TABLE `afvp_site`.`donation`
   ADD INDEX `fk_dona_paym_id_idx` (`payment_type_id` ASC);
 
 ALTER TABLE `afvp_site`.`donor`
@@ -210,7 +214,7 @@ ALTER TABLE `afvp_site`.`donation`
   ADD CONSTRAINT `fk_dona_donor_id_idx` FOREIGN KEY (`donor_id`) REFERENCES `afvp_site`.`donor` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `afvp_site`.`donation`
-  ADD CONSTRAINT `fk_dona_memb_id_idx` FOREIGN KEY (`donor_id`) REFERENCES `afvp_site`.`member` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_dona_member_id_idx` FOREIGN KEY (`member_id`) REFERENCES `afvp_site`.`member` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `afvp_site`.`donation`
   ADD CONSTRAINT `fk_dona_paym_id_idx` FOREIGN KEY (`payment_type_id`) REFERENCES `afvp_site`.`payment_type` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;

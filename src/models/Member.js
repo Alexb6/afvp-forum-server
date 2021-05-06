@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
 			this.belongsTo(models.Subscription, { foreignKey: 'subscription_id' });
 			this.hasMany(models.Category, { foreignKey: 'member_id' });
 			this.hasMany(models.Post, { foreignKey: 'member_id' });
-			this.belongsTo(models.Donation, { foreignKey: 'donor_id' });
+			this.belongsTo(models.Donation, { foreignKey: 'member_id' });
 		}
 	};
 	Member.init({
@@ -123,18 +123,14 @@ module.exports = (sequelize, DataTypes) => {
 			type: DataTypes.BOOLEAN
 		},
 		role_id: {
-			allowNull: false,
 			type: DataTypes.UUID,
 			validate: {
-				notNull: true,
 				isUUID: 4
 			}
 		},
 		subscription_id: {
-			allowNull: false,
 			type: DataTypes.UUID,
 			validate: {
-				notNull: true,
 				isUUID: 4
 			}
 		},

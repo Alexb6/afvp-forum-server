@@ -19,6 +19,9 @@ module.exports = {
          payment_id: {
             type: Sequelize.UUID
          },
+         member_id: {
+            type: Sequelize.UUID
+         },
          donor_id: {
             type: Sequelize.UUID
          },
