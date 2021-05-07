@@ -72,7 +72,7 @@ module.exports = {
 			},
 			is_active: {
 				type: Sequelize.BOOLEAN,
-				comment: 'Membership disabling'
+				comment: 'Membership active status'
 			},
 			status: {
 				type: Sequelize.ENUM('tovalidate', 'inregistration', 'registered', 'rejected'),
@@ -94,6 +94,10 @@ module.exports = {
 			updated_at: {
 				allowNull: false,
 				type: Sequelize.DATE
+			},
+			deleted_at: {
+				type: Sequelize.DATE,
+				comment: 'Member soft deletion date'
 			}
 		});
 	},

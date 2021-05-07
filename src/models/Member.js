@@ -133,12 +133,16 @@ module.exports = (sequelize, DataTypes) => {
 		updated_at: {
 			allowNull: false,
 			type: DataTypes.DATE
+		},
+		deleted_at: {
+			type: DataTypes.DATE
 		}
 	}, {
 		sequelize,
 		modelName: 'Member',
 		createdAt: 'created_at',
-		updatedAt: 'updated_at'
+		updatedAt: 'updated_at',
+		deletedAt: 'deleted_at'
 	});
 	return Member;
 };
