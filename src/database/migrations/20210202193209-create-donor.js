@@ -20,10 +20,6 @@ module.exports = {
 				allowNull: false,
 				type: Sequelize.STRING(150)
 			},
-			fullname_slug: {
-				allowNull: false,
-				type: Sequelize.STRING(150)
-			},
 			email: {
 				allowNull: false,
 				type: Sequelize.STRING(150)

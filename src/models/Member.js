@@ -44,14 +44,6 @@ module.exports = (sequelize, DataTypes) => {
 				len: [3, 150]
 			}
 		},
-		fullname_slug: {
-			allowNull: false,
-			type: DataTypes.STRING,
-			validate: {
-				notNull: true,
-				len: [3, 150]
-			}
-		},
 		email: {
 			allowNull: false,
 			type: DataTypes.STRING,
