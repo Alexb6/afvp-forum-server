@@ -17,3 +17,10 @@ app.listen(port, () => {
 	console.log(`App is running on port ${port}...`);
 	console.log(`Current environment is ${env}`);
 });
+
+app.all('*', (req, res, next) => {
+	res.status(404).json({
+		status: 'Fail',
+		message: `Cannot find ${req.originalUrl} on this server!`
+	});
+});

@@ -1,4 +1,9 @@
 'use strict';
+
+const slugify = require('slugify');
+const slugify_options = require('./../helpers/slugify_options');
+const bcrypt = require('bcrypt');
+
 const {
 	Model
 } = require('sequelize');
@@ -9,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
 			this.belongsTo(models.Subscription, { foreignKey: 'subscription_id' });
 			this.hasMany(models.Category, { foreignKey: 'member_id' });
 			this.hasMany(models.Post, { foreignKey: 'member_id' });
-			this.belongsTo(models.Donation, { foreignKey: 'member_id' });
+			this.hasMany(models.Donation, { foreignKey: 'member_id' });
 		}
 	};
 	Member.init({
@@ -105,7 +110,8 @@ module.exports = (sequelize, DataTypes) => {
 			type: DataTypes.DATE
 		},
 		is_active: {
-			type: DataTypes.BOOLEAN
+			type: DataTypes.BOOLEAN,
+			defaultValue: true
 		},
 		status: {
 			type: DataTypes.ENUM('tovalidate', 'inregistration', 'registered', 'rejected'),
@@ -136,13 +142,96 @@ module.exports = (sequelize, DataTypes) => {
 		},
 		deleted_at: {
 			type: DataTypes.DATE
+		},
+		full_name_slug: {
+			type: DataTypes.VIRTUAL,
+			get() {
+				const full_name = `${this.first_name} ${this.family_name}`;
+				return slugify(full_name, slugify_options);
+			}
 		}
 	}, {
 		sequelize,
 		modelName: 'Member',
 		createdAt: 'created_at',
 		updatedAt: 'updated_at',
-		deletedAt: 'deleted_at'
+		deletedAt: 'deleted_at',
+		defaultScope: {
+			attributes: {
+				exclude: [
+					'password',
+					'pass_confirm',
+					'pass_changed_dt',
+					'pass_reset_token',
+					'pass_reset_expired_dt'
+				]
+			}
+		},
+		validate: {
+			checkPassConfirm() {
+				if (this.pass_confirm !== this.password) {
+					throw new Error('The password confirm is not identical to the password!')
+				}
+			},
+		}
 	});
+	/* Hooks */
+	Member.beforeValidate(async (member, next) => {
+		if (!member.changed('password')) return next();
+		member.password = await bcrypt.hash(member.password, 12);
+		member.pass_confirm = member.password;
+	});
+
 	return Member;
 };
+
+// const bcrypt = require('bcrypt');
+// var userSchema = sequelize.define("users", {
+// 	userId: {
+// 		field: 'user_id',
+// 		autoIncrement: true,
+// 		primaryKey: true,
+// 		type: Sequelize.INTEGER
+// 	},
+// 	password: {
+// 		field: 'user_password',
+// 		type: Sequelize.STRING,
+// 		allowNull: true
+// 	},
+// 	name: {
+// 		type: Sequelize.STRING,
+// 		field: 'user_name',
+// 		allowNull: false
+// 	},
+// 	email: {
+// 		type: Sequelize.STRING,
+// 		field: 'user_email',
+// 		allowNull: false
+// 	},
+// },
+// 	{
+// 		hooks: {
+// 			beforeCreate: async (user) => {
+// 				if (user.password) {
+// 					const salt = await bcrypt.genSaltSync(10, 'a');
+// 					user.password = bcrypt.hashSync(user.password, salt);
+// 				}
+// 			},
+// 			beforeUpdate: async (user) => {
+// 				if (user.password) {
+// 					const salt = await bcrypt.genSaltSync(10, 'a');
+// 					user.password = bcrypt.hashSync(user.password, salt);
+// 				}
+// 			}
+// 		},
+// 		instanceMethods: {
+// 			validPassword: (password) => {
+// 				return bcrypt.compareSync(password, this.password);
+// 			}
+// 		}
+// 	}
+// );
+// userSchema.prototype.validPassword = async (password, hash) => {
+// 	return await bcrypt.compareSync(password, hash);
+// }
+// return userSchema;

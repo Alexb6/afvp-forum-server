@@ -1,11 +1,16 @@
 'use strict';
+
+const slugify = require('slugify');
+const slugify_options = require('./../helpers/slugify_options');
+const bcrypt = require('bcrypt');
+
 const {
 	Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
 	class Donor extends Model {
 		static associate(models) {
-			this.belongsTo(models.Donation, {foreignKey: 'donor_id'});
+			this.hasMany(models.Donation, { foreignKey: 'donor_id' });
 			this.belongsTo(models.Role, { foreignKey: 'role_id' });
 		}
 	};
@@ -104,12 +109,43 @@ module.exports = (sequelize, DataTypes) => {
 		updated_at: {
 			allowNull: false,
 			type: DataTypes.DATE
+		},
+		full_name_slug: {
+			type: DataTypes.VIRTUAL,
+			get() {
+				const full_name = `${this.first_name} ${this.family_name}`;
+				return slugify(full_name, slugify_options);
+			}
 		}
 	}, {
 		sequelize,
 		modelName: 'Donor',
 		createdAt: 'created_at',
-		updatedAt: 'updated_at'
+		updatedAt: 'updated_at',
+		defaultScope: {
+			attributes: {
+				exclude: [
+					'password',
+					'pass_confirm',
+					'pass_reset_token',
+					'pass_reset_expired_dt'
+				]
+			}
+		},
+		validate: {
+			checkPassConfirm() {
+				if (this.pass_confirm !== this.password) {
+					throw new Error('The password confirm is not identical to the password!')
+				}
+			},
+		}
 	});
+	/* Hooks */
+	Donor.beforeValidate(async (donor, next) => {
+		if (!donor.changed('password')) return next();
+		donor.password = await bcrypt.hash(donor.password, 12);
+		donor.pass_confirm = donor.password;
+	});
+
 	return Donor;
 };

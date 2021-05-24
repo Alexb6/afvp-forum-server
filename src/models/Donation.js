@@ -5,8 +5,8 @@ const {
 module.exports = (sequelize, DataTypes) => {
 	class Donation extends Model {
 		static associate(models) {
-			this.hasMany(models.Member, { foreignKey: 'member_id' });
-			this.hasMany(models.Donor, { foreignKey: 'donor_id' });
+			this.belongsTo(models.Member, { foreignKey: 'member_id' });
+			this.belongsTo(models.Donor, { foreignKey: 'donor_id' });
 			this.belongsTo(models.PaymentType, { foreignKey: 'payment_id' });
 		}
 	};
