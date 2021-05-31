@@ -1,17 +1,40 @@
 const express = require('express');
-const donorControllers = require('./../controllers/donorControllers');
+const {
+   getAllDonor,
+   getDonor,
+   updateDonor,
+   deleteDonor,
+   signUpDonor,
+   loginDonor,
+   tokenProtectDonor,
+   forgotPasswordDonor,
+   resetPasswordDonor,
+   updateMyPasswordDonor,
+   viewMyProfileDonor,
+   updateMyProfileDonor } = require('./../controllers/donorControllers');
 
 const router = express.Router();
 
-router.route('/')
-   .get(donorControllers.getAllDonor);
+router.post('/signup', signUpDonor);
 
-router.route('/signup')
-   .post(donorControllers.signUpDonor);
+router.post('/login', loginDonor);
+
+router.post('/forgot-password', forgotPasswordDonor);
+
+router.patch('/reset-password/:token', resetPasswordDonor);
+
+router.patch('/update-my-password', tokenProtectDonor, updateMyPasswordDonor);
+
+router.get('/profile', tokenProtectDonor, viewMyProfileDonor);
+
+router.patch('/profile/update-profile', tokenProtectDonor, updateMyProfileDonor);
+
+router.route('/')
+   .get(getAllDonor);
 
 router.route('/:id')
-   .get(donorControllers.getDonor)
-   .patch(donorControllers.updateDonor)
-   .delete(donorControllers.deleteDonor);
+   .get(getDonor)
+   .patch(updateDonor)
+   .delete(deleteDonor);
 
 module.exports = router;

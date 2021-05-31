@@ -32,6 +32,9 @@ module.exports = {
 				allowNull: false,
 				type: Sequelize.STRING(255)
 			},
+			pass_changed_dt: {
+				type: Sequelize.DATE
+			},
 			pass_reset_token: {
 				type: Sequelize.STRING(255)
 			},

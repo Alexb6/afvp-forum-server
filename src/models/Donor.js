@@ -2,7 +2,6 @@
 
 const slugify = require('slugify');
 const slugify_options = require('./../helpers/slugify_options');
-const bcrypt = require('bcrypt');
 
 const {
 	Model
@@ -69,6 +68,9 @@ module.exports = (sequelize, DataTypes) => {
 				notNull: true,
 				len: [3, 255]
 			}
+		},
+		pass_changed_dt: {
+			type: DataTypes.DATE
 		},
 		pass_reset_token: {
 			type: DataTypes.STRING,
@@ -141,11 +143,6 @@ module.exports = (sequelize, DataTypes) => {
 		}
 	});
 	/* Hooks */
-	Donor.beforeValidate(async (donor, next) => {
-		if (!donor.changed('password')) return next();
-		donor.password = await bcrypt.hash(donor.password, 12);
-		donor.pass_confirm = donor.password;
-	});
 
 	return Donor;
 };

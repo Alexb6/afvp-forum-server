@@ -2,7 +2,6 @@
 
 const slugify = require('slugify');
 const slugify_options = require('./../helpers/slugify_options');
-const bcrypt = require('bcrypt');
 
 const {
 	Model
@@ -170,68 +169,12 @@ module.exports = (sequelize, DataTypes) => {
 		validate: {
 			checkPassConfirm() {
 				if (this.pass_confirm !== this.password) {
-					throw new Error('The password confirm is not identical to the password!')
+					throw new Error('The confirmed password is not identical to the password!')
 				}
 			},
 		}
 	});
 	/* Hooks */
-	Member.beforeValidate(async (member, next) => {
-		if (!member.changed('password')) return next();
-		member.password = await bcrypt.hash(member.password, 12);
-		member.pass_confirm = member.password;
-	});
-
+	
 	return Member;
 };
-
-// const bcrypt = require('bcrypt');
-// var userSchema = sequelize.define("users", {
-// 	userId: {
-// 		field: 'user_id',
-// 		autoIncrement: true,
-// 		primaryKey: true,
-// 		type: Sequelize.INTEGER
-// 	},
-// 	password: {
-// 		field: 'user_password',
-// 		type: Sequelize.STRING,
-// 		allowNull: true
-// 	},
-// 	name: {
-// 		type: Sequelize.STRING,
-// 		field: 'user_name',
-// 		allowNull: false
-// 	},
-// 	email: {
-// 		type: Sequelize.STRING,
-// 		field: 'user_email',
-// 		allowNull: false
-// 	},
-// },
-// 	{
-// 		hooks: {
-// 			beforeCreate: async (user) => {
-// 				if (user.password) {
-// 					const salt = await bcrypt.genSaltSync(10, 'a');
-// 					user.password = bcrypt.hashSync(user.password, salt);
-// 				}
-// 			},
-// 			beforeUpdate: async (user) => {
-// 				if (user.password) {
-// 					const salt = await bcrypt.genSaltSync(10, 'a');
-// 					user.password = bcrypt.hashSync(user.password, salt);
-// 				}
-// 			}
-// 		},
-// 		instanceMethods: {
-// 			validPassword: (password) => {
-// 				return bcrypt.compareSync(password, this.password);
-// 			}
-// 		}
-// 	}
-// );
-// userSchema.prototype.validPassword = async (password, hash) => {
-// 	return await bcrypt.compareSync(password, hash);
-// }
-// return userSchema;

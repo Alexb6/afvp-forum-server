@@ -1,7 +1,25 @@
 const { Member, sequelize } = require('./../models');
-const { OK, CREATED, BAD_REQUEST, NO_CONTENT } = require('./../helpers/status_codes');
+const { OK, BAD_REQUEST } = require('./../helpers/status_codes');
 const factoryControllers = require('./factoryControllers');
 const authControllers = require('./authControllers');
+
+const getMemberProfileInfos = async (id) => {
+   const user = await Member.findOne({
+      where: { id },
+      attributes: [
+         'first_name',
+         'family_name',
+         'email',
+         'address',
+         'country',
+         'title',
+         'speciality',
+         'biography',
+         'hobby'
+      ]
+   });
+   return user;
+}
 
 exports.signUpMember = authControllers.signUpOne(Member);
 
@@ -12,6 +30,20 @@ exports.updateMember = factoryControllers.updateOne(Member);
 exports.deleteMember = factoryControllers.deleteOne(Member);
 
 exports.getAllMember = factoryControllers.getAll(Member);
+
+exports.loginMember = authControllers.loginOne(Member);
+
+exports.tokenProtectMember = authControllers.tokenProtect(Member);
+
+exports.forgotPasswordMember = authControllers.forgotPassword(Member);
+
+exports.resetPasswordMember = authControllers.resetPassword(Member);
+
+exports.updateMyPasswordMember = authControllers.updateMyPassword(Member);
+
+exports.viewMyProfileMember = factoryControllers.viewMyProfile(getMemberProfileInfos);
+
+exports.updateMyProfileMember = factoryControllers.updateMyProfile(Member);
 
 exports.deactivateMember = async (req, res) => {
    const t = await sequelize.transaction();

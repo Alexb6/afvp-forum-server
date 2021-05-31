@@ -1,11 +1,11 @@
 const { Role, sequelize } = require('./../models');
 const { OK, CREATED, BAD_REQUEST, NO_CONTENT } = require('./../helpers/status_codes');
-
+const AppError = require('./../utils/appError');
 
 exports.createOne = Model => async (req, res) => {
    const t = await sequelize.transaction();
    try {
-      if (Model.name === 'Donor') {   
+      if (Model.name === 'Donor') {
          const role = await Role.findOne({ where: { name: 'donator' } });
          req.body.role_id = role.id;
       }
@@ -20,8 +20,8 @@ exports.createOne = Model => async (req, res) => {
          status: 'Fail to create the data!',
          message: err
       });
+      await t.rollback();
    }
-   await t.rollback();
 }
 
 exports.getOne = Model => async (req, res) => {
@@ -42,7 +42,7 @@ exports.getOne = Model => async (req, res) => {
    }
 }
 
-exports.updateOne = Model => async(req, res) => {
+exports.updateOne = Model => async (req, res) => {
    const t = await sequelize.transaction();
    try {
       await Model.update(
@@ -50,10 +50,10 @@ exports.updateOne = Model => async(req, res) => {
          { where: { id: req.params.id } },
          { transaction: t }
       );
-      const datum = await Model.findByPk(req.params.id);
+      const newDatum = await Model.findByPk(req.params.id);
       res.status(OK).json({
          status: 'Success',
-         data: { datum }
+         data: { newDatum }
       });
       await t.commit();
    } catch (err) {
@@ -92,7 +92,7 @@ exports.getAll = Model => async (req, res) => {
       const queryString = JSON.parse(JSON.stringify(req.query));
       const excludeParamsKeys = ['page', 'limit', 'sort', 'fields'];
       excludeParamsKeys.forEach(key => delete queryString[key]);
-      if(Model.name === 'Member') {
+      if (Model.name === 'Member') {
          queryString.is_active = true;
          myQuery.where = queryString;
       }
@@ -111,7 +111,7 @@ exports.getAll = Model => async (req, res) => {
       const orderBy = [];
       if (req.query.sort) {
          const sortFields = req.query.sort.split(',');
-         sortFields.forEach(field =>{
+         sortFields.forEach(field => {
             if (field.startsWith('-')) {
                const fieldToArray = [];
                fieldToArray.push(field.substring(1), 'DESC');
@@ -123,7 +123,7 @@ exports.getAll = Model => async (req, res) => {
             };
          });
          myQuery.order = orderBy;
-      }   
+      }
       /* Selecting fields with fields key */
       const fields = [];
       if (req.query.fields) {
@@ -143,5 +143,56 @@ exports.getAll = Model => async (req, res) => {
          status: 'Fail to get the data!',
          message: err
       });
+   }
+}
+
+exports.viewMyProfile = fn => async (req, res) => {
+   const user = await fn(req.user.id);
+
+   res.status(OK).json({
+      status: 'Success',
+      data: { user }
+   });
+}
+
+exports.updateMyProfile = Model => async (req, res, next) => {
+   const t = await sequelize.transaction();
+   try {
+      if (req.body.password || req.body.pass_confirm) {
+         return next(new AppError('This route is not for updating your password. Please use the dedicated "Change my password" option!', BAD_REQUEST));
+      }
+      
+      let filteredReqBody = {};
+      if (Model.name === 'Member') {
+         const allowedFields = ['family_name', 'first_name', 'email', 'biography', 'address', 'country', 'title', 'speciality', 'hobby'];
+         Object.keys(req.body).forEach(field => {
+            if (allowedFields.includes(field)) filteredReqBody[field] = req.body[field];
+         });
+      }
+      if (Model.name === 'Donor') {
+         const allowedFields = ['family_name', 'first_name', 'email', 'address', 'country', 'firm'];
+         Object.keys(req.body).forEach(field => {
+            if (allowedFields.includes(field)) filteredReqBody[field] = req.body[field];
+         });
+      }
+      
+      await Model.update(
+         filteredReqBody,
+         { where: { id: req.user.id } },
+         { transaction: t }
+      );
+      const updatedUser = await Model.findByPk(req.user.id);
+      res.status(OK).json({
+         status: 'Success',
+         data: { updatedUser }
+      });
+      await t.commit();
+
+   } catch (err) {
+      res.status(BAD_REQUEST).json({
+         status: 'Fail to update the member!',
+         message: err
+      });
+      await t.rollback();
    }
 }
