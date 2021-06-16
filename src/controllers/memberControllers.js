@@ -41,7 +41,7 @@ exports.resetPasswordMember = authControllers.resetPassword(Member);
 
 exports.updateMyPasswordMember = authControllers.updateMyPassword(Member);
 
-exports.viewMyProfileMember = factoryControllers.viewMyProfile(getMemberProfileInfos);
+exports.getMyProfileMember = factoryControllers.getMyProfile(getMemberProfileInfos);
 
 exports.updateMyProfileMember = factoryControllers.updateMyProfile(Member);
 

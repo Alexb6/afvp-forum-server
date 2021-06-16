@@ -18,7 +18,7 @@ exports.createOne = Model => async (req, res) => {
    } catch (err) {
       res.status(BAD_REQUEST).json({
          status: 'Fail to create the data!',
-         message: err
+         message: err.message
       });
       await t.rollback();
    }
@@ -37,7 +37,7 @@ exports.getOne = Model => async (req, res) => {
    } catch (err) {
       res.status(BAD_REQUEST).json({
          status: 'Fail to get the datum!',
-         message: err
+         message: err.message
       });
    }
 }
@@ -59,7 +59,7 @@ exports.updateOne = Model => async (req, res) => {
    } catch (err) {
       res.status(BAD_REQUEST).json({
          status: 'Fail to update the datum!',
-         message: err
+         message: err.message
       });
       await t.rollback();
    }
@@ -79,7 +79,7 @@ exports.deleteOne = Model => async (req, res) => {
    } catch (err) {
       res.status(BAD_REQUEST).json({
          status: 'Fail to delete the datum!',
-         message: err
+         message: err.message
       });
       await t.rollback();
    }
@@ -141,12 +141,12 @@ exports.getAll = Model => async (req, res) => {
    } catch (err) {
       res.status(BAD_REQUEST).json({
          status: 'Fail to get the data!',
-         message: err
+         message: err.message
       });
    }
 }
 
-exports.viewMyProfile = fn => async (req, res) => {
+exports.getMyProfile = fn => async (req, res) => {
    const user = await fn(req.user.id);
 
    res.status(OK).json({
@@ -191,7 +191,7 @@ exports.updateMyProfile = Model => async (req, res, next) => {
    } catch (err) {
       res.status(BAD_REQUEST).json({
          status: 'Fail to update the member!',
-         message: err
+         message: err.message
       });
       await t.rollback();
    }

@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const morgan = require('morgan');
 const cors = require('./cors');
 const rateLimit = require('express-rate-limit');
@@ -7,6 +8,7 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 
 const routes = require('./routes');
+const AppError = require('./utils/appError');
 
 /* Adding all express methods into the app */
 const app = express();
@@ -34,12 +36,26 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.options('*', cors)
 app.use(cors);
 /* Using static file from the public folder */
-app.use(express.static(`${__dirname}/public`));
+app.use(express.static(path.join(__dirname, 'public')));
 /* Sanitize user input from POST body, GET queries, and url params */
 app.use(xss());
 /* Prevent HTTP Parameter Pollution */
 app.use(hpp());
 
 app.use('/api/v1', routes);
+
+app.all('*', (req, res, next) => {
+   next(new AppError(`Can't find ${req.originalUrl} route on the server!`, 404));
+});
+/* Global error handling middleware */
+app.use((err, req, res, next) => {
+   if (res.headerSent) {
+      return next(err);
+   }
+   res.status(err.statusCode || 500).json({
+      status: err.status,
+      message: err.message || 'An unknown error occurred!'
+   });
+});
 
 module.exports = app;

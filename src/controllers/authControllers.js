@@ -8,7 +8,7 @@ const { Role, sequelize } = require('./../models');
 const { Op } = require("sequelize");
 const AppError = require('./../utils/appError');
 const sendEmail = require('./../utils/nodeMailer');
-const { OK, CREATED, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SERVER_ERROR } = require('./../helpers/status_codes');
+const { OK, CREATED, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SERVER_ERROR, UNPROCESSABLE_ENTITY } = require('./../helpers/status_codes');
 
 const hashPassword = async password => {
    return await bcrypt.hash(password, 12);
@@ -20,24 +20,25 @@ const createJwtToken = id => {
    });
 }
 
-const createAndSendToken = (user, statusCode, res) => {
-   const token = createJwtToken(user.id);
+const createAndSendToken = (aUser, statusCode, res) => {
+   const token = createJwtToken(aUser.id);
 
    const cookieOptions = {
       expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
       httpOnly: true
    };
    if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
-   // res.cookie('jwtToken', token, cookieOptions);
+   res.cookie('jwtToken', token, cookieOptions);
 
-   const filteredUser = JSON.parse(JSON.stringify(user));
-   if (filteredUser.password) delete filteredUser.password;
-   if (filteredUser.pass_confirm) delete filteredUser.pass_confirm;
+   const user = JSON.parse(JSON.stringify(aUser));
+   if (user.password) delete user.password;
+   if (user.pass_confirm) delete user.pass_confirm;
+   if (user.role_id) delete user.role_id;
 
    res.status(statusCode).json({
       status: 'Success',
       token,
-      data: { filteredUser }
+      data: { user }
    });
 }
 
@@ -63,15 +64,18 @@ const createPasswordResetToken = async (user) => {
 }
 
 
-exports.signUpOne = Model => async (req, res) => {
+exports.signUpOne = Model => async (req, res, next) => {
    const t = await sequelize.transaction();
    try {
+      const existingUser = await Model.findOne({
+         where: { email: req.body.email }
+      });
+      if (existingUser) {
+         return next(new AppError('Un utilisateur avec ce courriel existe déjà ! Si vous êtes inscrit, veuillez vous connecter à votre espace.', UNPROCESSABLE_ENTITY));
+      }
+
       if (Model.name === 'Donor') {
          const role = await Role.findOne({ where: { name: 'donator' } });
-         req.body.role_id = role.id;
-      }
-      if (Model.name === 'Member') {
-         const role = await Role.findOne({ where: { name: req.body.role } });
          req.body.role_id = role.id;
       }
       (req.body.gender === 'Monsieur' || 'Ông') ? req.body.gender = 'Mr' : req.body.gender = 'Mrs';
@@ -86,7 +90,7 @@ exports.signUpOne = Model => async (req, res) => {
    } catch (err) {
       res.status(BAD_REQUEST).json({
          status: 'Fail to create the data!',
-         message: err
+         message: err.message
       });
       await t.rollback();
    }
@@ -102,18 +106,20 @@ exports.loginOne = Model => async (req, res, next) => {
          attributes: ['id', 'email', 'password']
       });
       if (!user) {
-         return next(new AppError('Incorrect email or password entered!', UNAUTHORIZED));
+         return next(new AppError('Votre courriel ou votre mot de passe est incorrect !', UNAUTHORIZED));
       }
 
       const correctPassword = await comparePassword(req.body.password, user.password);
       if (!correctPassword) {
-         return next(new AppError('Incorrect email or password entered!', UNAUTHORIZED));
+         return next(new AppError('Votre courriel ou votre mot de passe est incorrect !', UNAUTHORIZED));
       }
 
       createAndSendToken(user, OK, res);
-
    } catch (err) {
-      console.error(err);
+      res.status(UNAUTHORIZED).json({
+         status: 'Fail to login!',
+         message: err.message
+      })
    }
 }
 
@@ -126,7 +132,7 @@ exports.tokenProtect = Model => async (req, res, next) => {
       if (!token) {
          return next(new AppError('Please log in to get access!', UNAUTHORIZED));
       }
-      
+
       const tokenPayload = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
 
       const currentUserExists = await Model.findOne({
@@ -154,7 +160,10 @@ exports.tokenProtect = Model => async (req, res, next) => {
       req.user = currentUserExists;
 
    } catch (err) {
-      console.error(err);
+      res.status(UNAUTHORIZED).json({
+         status: 'You are not authorized to access this resource!',
+         message: err.message
+      })
    }
    next();
 }
@@ -205,7 +214,10 @@ exports.forgotPassword = Model => async (req, res, next) => {
       }
 
    } catch (err) {
-      console.error(err);
+      res.status(BAD_REQUEST).json({
+         status: 'Unable to process your request. Please try again later!',
+         message: err.message
+      })
    }
 }
 
@@ -243,7 +255,10 @@ exports.resetPassword = Model => async (req, res, next) => {
 
       createAndSendToken(user, OK, res);
    } catch (err) {
-      console.error(err);
+      res.status(BAD_REQUEST).json({
+         status: 'Unable to process your request. Please try again later!',
+         message: err.message
+      })
    }
 }
 
@@ -267,7 +282,7 @@ exports.updateMyPassword = Model => async (req, res, next) => {
       if (!correctPassword) {
          return next(new AppError('You entered a wrong current password! Please give the right password.', UNAUTHORIZED));
       }
-      
+
       user.password = await hashPassword(req.body.password);
       user.pass_confirm = user.password;
       user.pass_changed_dt = Date.now() - 3000;
@@ -276,7 +291,10 @@ exports.updateMyPassword = Model => async (req, res, next) => {
       createAndSendToken(user, OK, res);
       await t.commit();
    } catch (err) {
-      console.error(err);
+      res.status(BAD_REQUEST).json({
+         status: 'Unable to process your request. Please try again later!',
+         message: err.message
+      });
       await t.rollback();
    }
 }

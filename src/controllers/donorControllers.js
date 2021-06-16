@@ -38,7 +38,7 @@ exports.resetPasswordDonor = authControllers.resetPassword(Donor);
 
 exports.updateMyPasswordDonor = authControllers.updateMyPassword(Donor);
 
-exports.viewMyProfileDonor = factoryControllers.viewMyProfile(getDonorProfileInfos);
+exports.getMyProfileDonor = factoryControllers.getMyProfile(getDonorProfileInfos);
 
 exports.updateMyProfileDonor = factoryControllers.updateMyProfile(Donor);
 
