@@ -25,10 +25,11 @@ const createAndSendToken = (aUser, statusCode, res) => {
 
    const cookieOptions = {
       expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
-      httpOnly: true
+      httpOnly: true,
+      sameSite: 'lax'
    };
    if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
-   res.cookie('jwtToken', token, cookieOptions);
+   res.cookie('jwtToken', 'Bearer ' + token, cookieOptions);
 
    const user = JSON.parse(JSON.stringify(aUser));
    if (user.password) delete user.password;
@@ -68,7 +69,8 @@ exports.signUpOne = Model => async (req, res, next) => {
    const t = await sequelize.transaction();
    try {
       const existingUser = await Model.findOne({
-         where: { email: req.body.email }
+         where: { email: req.body.email },
+         attributes: ['id', 'email', 'first_name', 'family_name']
       });
       if (existingUser) {
          return next(new AppError('Un utilisateur avec ce courriel existe déjà ! Si vous êtes inscrit, veuillez vous connecter à votre espace.', UNPROCESSABLE_ENTITY));
@@ -103,7 +105,7 @@ exports.loginOne = Model => async (req, res, next) => {
       // }
       const user = await Model.findOne({
          where: { email: req.body.email },
-         attributes: ['id', 'email', 'password']
+         attributes: ['id', 'email', 'first_name', 'family_name', 'password']
       });
       if (!user) {
          return next(new AppError('Votre courriel ou votre mot de passe est incorrect !', UNAUTHORIZED));
@@ -203,7 +205,7 @@ exports.forgotPassword = Model => async (req, res, next) => {
          })
          res.status(OK).json({
             status: 'Success',
-            message: 'Token is sent to user!'
+            message: 'A link to reset the password has been sent to user!'
          })
       } catch (err) {
          user.pass_reset_token = null;

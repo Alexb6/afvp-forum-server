@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const morgan = require('morgan');
 const cors = require('./cors');
+const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const xss = require('xss-clean');
@@ -33,7 +34,7 @@ app.use(express.json({ limit: '10kb' }));
 /* URL Encoded, parsing data obj w nested obj */
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 /* Use my CORS settings while accessing the API */
-app.options('*', cors)
+app.options('*', cors);
 app.use(cors);
 /* Using static file from the public folder */
 app.use(express.static(path.join(__dirname, 'public')));
@@ -41,6 +42,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(xss());
 /* Prevent HTTP Parameter Pollution */
 app.use(hpp());
+
+app.use(cookieParser());
 
 app.use('/api/v1', routes);
 
