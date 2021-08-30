@@ -188,6 +188,12 @@ ALTER TABLE `afvp_site`.`donation`
 ALTER TABLE `afvp_site`.`donor`
   ADD INDEX `fk_dono_role_id_idx` (`role_id` ASC);
 
+ALTER TABLE `afvp_site`.`donor`
+  ADD INDEX `dono_name_idx` (`family_name` ASC, `first_name` ASC);
+
+ALTER TABLE `afvp_site`.`donor`
+  ADD INDEX `dono_email_idx` (`email` ASC);
+
 -- -----------------------------------------------------
 -- Foreign Keys creation
 -- -----------------------------------------------------

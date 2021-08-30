@@ -9,24 +9,27 @@ const {
    signUpMember,
    loginMember,
    tokenProtectMember,
+   checkRefreshAndSendTokensMember,
    forgotPasswordMember,
    resetPasswordMember,
    updateMyPasswordMember,
    getMyProfileMember,
    updateMyProfileMember
 } = require('./../controllers/memberControllers');
-const { restrictTo } = require('./../controllers/authControllers');
+const { restrictTo, logoutOne } = require('./../controllers/authControllers');
 
 const router = express.Router();
 
 router.post('/signup', signUpMember);
 router.post('/login', loginMember);
 router.post('/forgot-password', forgotPasswordMember);
+router.post('/refresh-token', checkRefreshAndSendTokensMember);
 router.patch('/reset-password/:token', resetPasswordMember);
 
 /* Token protected routes */
 router.use(tokenProtectMember);
 
+router.post('/logout', logoutOne);
 router.patch('/update-my-password', updateMyPasswordMember);
 router.get('/profile', getMyProfileMember);
 router.patch('/profile/update-profile', updateMyProfileMember);

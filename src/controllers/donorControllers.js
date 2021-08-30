@@ -32,6 +32,8 @@ exports.loginDonor = authControllers.loginOne(Donor);
 
 exports.tokenProtectDonor = authControllers.tokenProtect(Donor);
 
+exports.checkRefreshAndSendTokensDonor = authControllers.checkRefreshAndSendTokens(Donor);
+
 exports.forgotPasswordDonor = authControllers.forgotPassword(Donor);
 
 exports.resetPasswordDonor = authControllers.resetPassword(Donor);
@@ -41,5 +43,3 @@ exports.updateMyPasswordDonor = authControllers.updateMyPassword(Donor);
 exports.getMyProfileDonor = factoryControllers.getMyProfile(getDonorProfileInfos);
 
 exports.updateMyProfileDonor = factoryControllers.updateMyProfile(Donor);
-
-

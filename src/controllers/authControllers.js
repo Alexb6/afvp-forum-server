@@ -1,6 +1,8 @@
 require('dotenv').config();
-const { promisify } = require('util');
 const crypto = require('crypto');
+const randtoken = require('rand-token');
+const moment = require('moment');
+const ms = require('ms');
 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -8,39 +10,100 @@ const { Role, sequelize } = require('./../models');
 const { Op } = require("sequelize");
 const AppError = require('./../utils/appError');
 const sendEmail = require('./../utils/nodeMailer');
-const { OK, CREATED, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SERVER_ERROR, UNPROCESSABLE_ENTITY } = require('./../helpers/status_codes');
+const { OK, CREATED, NO_CONTENT, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SERVER_ERROR, UNPROCESSABLE_ENTITY } = require('./../helpers/status_codes');
 
 const hashPassword = async password => {
    return await bcrypt.hash(password, 12);
 }
 
-const createJwtToken = id => {
+const createAccessXsrfTokens = id => {
+   const xsrfToken = randtoken.generate(24);
+   const signKey = process.env.JWT_SECRET + xsrfToken;
+   const accessToken = jwt.sign({ id }, signKey, {
+      expiresIn: process.env.JWT_ACCESS_EXPIRES_IN
+   });
+
+   const accessTokenRefreshInterval = ms(process.env.JWT_ACCESS_EXPIRES_IN) - 60000;
+   return { xsrfToken, accessToken, accessTokenRefreshInterval };
+}
+
+const createRefreshToken = id => {
    return jwt.sign({ id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN
+      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN
    });
 }
 
-const createAndSendToken = (aUser, statusCode, res) => {
-   const token = createJwtToken(aUser.id);
-
-   const cookieOptions = {
-      expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
-      httpOnly: true,
-      sameSite: 'lax'
-   };
-   if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
-   res.cookie('jwtToken', 'Bearer ' + token, cookieOptions);
-
+const removeUserFileds = aUser => {
    const user = JSON.parse(JSON.stringify(aUser));
    if (user.password) delete user.password;
    if (user.pass_confirm) delete user.pass_confirm;
+   if (user.refresh_token) delete user.refresh_token;
+   if (user.updated_at) delete user.updated_at;
    if (user.role_id) delete user.role_id;
+   return user;
+}
+
+const createAndSendTokens = async (aUser, statusCode, res, Model) => {
+   const tokens = createAccessXsrfTokens(aUser.id);
+   const refreshToken = createRefreshToken(aUser.id);
+
+   const cookieOptions = {
+      expires: new Date(moment().add(ms(process.env.JWT_REFRESH_EXPIRES_IN), 'ms')),
+      sameSite: 'lax'
+   };
+   const refreshCookieOptions = {
+      ...cookieOptions,
+      httpOnly: true
+   };
+   if (process.env.NODE_ENV === 'production') refreshCookieOptions.secure = true; console.log(Model);
+
+   if (Model) {
+      if (Model.name === 'Member') res.cookie('userResource', 'members', cookieOptions);
+      if (Model.name === 'Donor') res.cookie('userResource', 'donors', cookieOptions);
+   }
+
+   const { xsrfToken, accessToken, accessTokenRefreshInterval } = tokens;
+   res.cookie('xsrfToken', xsrfToken, cookieOptions);
+   res.cookie('refreshToken', refreshToken, refreshCookieOptions);
+
+   const user = removeUserFileds(aUser);
 
    res.status(statusCode).json({
       status: 'Success',
-      token,
-      data: { user }
+      data: { token: { accessToken, accessTokenRefreshInterval }, user }
    });
+}
+
+const sendAndClearTokens = async (statusCode, res) => {
+   const accessToken = null;
+   const accessTokenRefreshInterval = null;
+
+   const cookieOptions = {
+      maxAge: -1,
+      sameSite: 'lax'
+   };
+   const refreshCookieOptions = {
+      ...cookieOptions,
+      httpOnly: true
+   };
+
+   res.cookie('userResource', '', cookieOptions);
+   res.cookie('xsrfToken', '', cookieOptions);
+   res.cookie('refreshToken', '', refreshCookieOptions);
+
+   res.status(statusCode).json({
+      status: 'Success',
+      data: { token: { accessToken, accessTokenRefreshInterval } }
+   });
+}
+
+const verifyToken = (token, xsrfToken = '') => {
+   try {
+      const signKey = process.env.JWT_SECRET + xsrfToken;
+      return jwt.verify(token, signKey);
+   } catch (err) {
+      return new AppError('The token is invalid or has expired!', UNAUTHORIZED)
+   }
 }
 
 const comparePassword = async (password, hashedPassword) => {
@@ -57,10 +120,10 @@ const passwordChangedDate = (passChangedDate, jwtTimestamp) => {
 
 const createPasswordResetToken = async (user) => {
    const resetToken = crypto.randomBytes(32).toString('hex');
-   const hashToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-   user.pass_reset_token = hashToken;
-   user.pass_reset_expired_dt = Date.now() + 2 * 60 * 60 * 1000;
-   await user.save();
+   const hashResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+   user.pass_reset_token = hashResetToken;
+   user.pass_reset_expired_dt = Date.now() + ms(process.env.PASSWORD_RESET_TOKEN_EXPIRES_IN);
+   await user.save({ validate: false });
    return resetToken;
 }
 
@@ -86,12 +149,16 @@ exports.signUpOne = Model => async (req, res, next) => {
       req.body.pass_confirm = req.body.password;
 
       const newUser = await Model.create(req.body, { transaction: t });
-      createAndSendToken(newUser, CREATED, res);
+      const user = removeUserFileds(newUser);
+      res.status(CREATED).json({
+         status: 'Success',
+         data: { user }
+      })
 
       await t.commit();
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Fail to create the data!',
+         status: 'Fail to create the user!',
          message: err.message
       });
       await t.rollback();
@@ -102,7 +169,7 @@ exports.loginOne = Model => async (req, res, next) => {
    try {
       // if (!req.body.email || !req.body.password) {
       //    return next(new AppError('Please provide an email and a password!', UNAUTHORIZED));
-      // }
+      // }   
       const user = await Model.findOne({
          where: { email: req.body.email },
          attributes: ['id', 'email', 'first_name', 'family_name', 'password']
@@ -116,7 +183,7 @@ exports.loginOne = Model => async (req, res, next) => {
          return next(new AppError('Votre courriel ou votre mot de passe est incorrect !', UNAUTHORIZED));
       }
 
-      createAndSendToken(user, OK, res);
+      createAndSendTokens(user, OK, res, Model);
    } catch (err) {
       res.status(UNAUTHORIZED).json({
          status: 'Fail to login!',
@@ -125,49 +192,98 @@ exports.loginOne = Model => async (req, res, next) => {
    }
 }
 
+exports.logoutOne = async (req, res, next) => {
+   try {
+      const user = req.user;
+      if (!user) {
+         return next(new AppError('To logout you have to be logged in!', UNAUTHORIZED));
+      }
+
+      sendAndClearTokens(OK, res);
+   } catch (err) {
+      res.status(UNAUTHORIZED).json({
+         status: 'Fail to logout!',
+         message: err.message
+      })
+   }
+}
+
 exports.tokenProtect = Model => async (req, res, next) => {
    try {
-      let token;
+      let accessToken;
       if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-         token = req.headers.authorization.split(' ')[1];
+         accessToken = req.headers.authorization.split(' ')[1];
       }
-      if (!token) {
+      const xsrfToken = req.headers.xsrftoken;
+      if (!accessToken || !xsrfToken) {
          return next(new AppError('Please log in to get access!', UNAUTHORIZED));
       }
 
-      const tokenPayload = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
+      const accessTokenPayload = verifyToken(accessToken, xsrfToken);
 
-      const currentUserExists = await Model.findOne({
-         where: { id: tokenPayload.id },
+      const currentUser = await Model.findOne({
+         where: { id: accessTokenPayload.id },
          attributes: [
             'id',
             'first_name',
             'family_name',
             'email',
             'pass_changed_dt',
-            'role_id']
+            'role_id'
+         ]
       });
-      if (!currentUserExists) {
-         return next(new AppError('The user with this token does no longer exist!', UNAUTHORIZED));
+      if (!currentUser) {
+         return next(new AppError('The user with this token does no longer exist!', FORBIDDEN));
       }
 
-      if (passwordChangedDate(currentUserExists.pass_changed_dt, tokenPayload.iat)) {
+      if (passwordChangedDate(currentUser.pass_changed_dt, accessTokenPayload.iat)) {
          return next(new AppError('The user has recently changed password. Please login again!', UNAUTHORIZED));
       }
 
-      const getUserRole = await Role.findOne({
-         where: { id: currentUserExists.role_id }
-      });
-      currentUserExists.role = getUserRole.name;
-      req.user = currentUserExists;
+      // const userRole = await Role.findOne({
+      //    where: { id: currentUser.role_id }
+      // });
+      // currentUser.role = userRole.name;
+      req.user = currentUser;
 
    } catch (err) {
       res.status(UNAUTHORIZED).json({
-         status: 'You are not authorized to access this resource!',
+         status: 'Fail',
          message: err.message
       })
    }
    next();
+}
+
+exports.checkRefreshAndSendTokens = Model => async (req, res, next) => {
+   try {
+      const refreshToken = req.cookies.refreshToken;
+      const xsrfToken = req.headers.xsrftoken;
+      if (!refreshToken || !xsrfToken) {
+         return next(new AppError('Your token is nonexistent. Please login!', NO_CONTENT));
+      }
+
+      const refreshTokenPayload = jwt.verify(refreshToken, process.env.JWT_SECRET);
+      const currentUser = await Model.findOne({
+         where: { id: refreshTokenPayload.id },
+         attributes: [
+            'id',
+            'first_name',
+            'family_name',
+            'email']
+      });
+
+      if (!currentUser) {
+         return next(new AppError('The user with this token does no longer exist!', UNAUTHORIZED));
+      }
+
+      createAndSendTokens(currentUser, OK, res, Model);
+   } catch (err) {
+      res.status(BAD_REQUEST).json({
+         status: 'Fail',
+         message: err.message
+      })
+   }
 }
 
 exports.restrictTo = (...roles) => {
@@ -225,11 +341,11 @@ exports.forgotPassword = Model => async (req, res, next) => {
 
 exports.resetPassword = Model => async (req, res, next) => {
    try {
-      const hashToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+      const hashResetToken = crypto.createHash('sha256').update(req.params.resetToken).digest('hex');
 
       const user = await Model.findOne({
          where: {
-            pass_reset_token: hashToken,
+            pass_reset_token: hashResetToken,
             pass_reset_expired_dt: { [Op.gt]: new Date() }
          },
          attributes: [
@@ -246,7 +362,7 @@ exports.resetPassword = Model => async (req, res, next) => {
       });
 
       if (!user) {
-         return next(new AppError('The token is invalid or has expired!', BAD_REQUEST));
+         return next(new AppError('The reset token is invalid or has expired!', UNAUTHORIZED));
       }
       user.password = await hashPassword(req.body.password);
       user.pass_confirm = user.password;
@@ -255,7 +371,7 @@ exports.resetPassword = Model => async (req, res, next) => {
       user.pass_changed_dt = Date.now() - 3000; // remove 3s to make sure this timestamp is anterior to the below jwt's timestamp
       await user.save();
 
-      createAndSendToken(user, OK, res);
+      createAndSendTokens(user, OK, res, Model);
    } catch (err) {
       res.status(BAD_REQUEST).json({
          status: 'Unable to process your request. Please try again later!',
@@ -290,7 +406,7 @@ exports.updateMyPassword = Model => async (req, res, next) => {
       user.pass_changed_dt = Date.now() - 3000;
       await user.save({ transaction: t });
 
-      createAndSendToken(user, OK, res);
+      createAndSendTokens(user, OK, res, Model);
       await t.commit();
    } catch (err) {
       res.status(BAD_REQUEST).json({

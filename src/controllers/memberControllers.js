@@ -35,6 +35,8 @@ exports.loginMember = authControllers.loginOne(Member);
 
 exports.tokenProtectMember = authControllers.tokenProtect(Member);
 
+exports.checkRefreshAndSendTokensMember = authControllers.checkRefreshAndSendTokens(Member);
+
 exports.forgotPasswordMember = authControllers.forgotPassword(Member);
 
 exports.resetPasswordMember = authControllers.resetPassword(Member);
@@ -89,7 +91,3 @@ exports.restoreMember = async (req, res) => {
       await t.rollback();
    }
 }
-
-
-
-

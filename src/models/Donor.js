@@ -73,16 +73,10 @@ module.exports = (sequelize, DataTypes) => {
 			type: DataTypes.DATE
 		},
 		pass_reset_token: {
-			type: DataTypes.STRING,
-			validate: {
-				len: [3, 255]
-			}
+			type: DataTypes.STRING
 		},
 		pass_reset_expired_dt: {
-			type: DataTypes.DATE,
-			validate: {
-				len: [3, 255]
-			}
+			type: DataTypes.DATE
 		},
 		photo: {
 			type: DataTypes.STRING

@@ -14,6 +14,16 @@ module.exports = {
 					name: 'memb_email_idx',
 					transaction: t
 				});
+				await queryInterface.addIndex('donors', {
+					fields: ['first_name', 'family_name'],
+					name: 'dono_name_idx',
+					transaction: t
+				});
+				await queryInterface.addIndex('donors', {
+					fields: ['email'],
+					name: 'dono_email_idx',
+					transaction: t
+				});
 				await queryInterface.addIndex('categories', {
 					fields: ['name'],
 					name: 'cate_name_idx',
@@ -40,6 +50,8 @@ module.exports = {
 			await queryInterface.sequelize.transaction(async t => {
 				await queryInterface.removeIndex('members', 'memb_name_idx', { transaction: t });
 				await queryInterface.removeIndex('members', 'memb_email_idx', { transaction: t });
+				await queryInterface.removeIndex('donors', 'dono_name_idx', { transaction: t });
+				await queryInterface.removeIndex('donors', 'dono_email_idx', { transaction: t });
 				await queryInterface.removeIndex('categories', 'cate_name_idx', { transaction: t });
 				await queryInterface.removeIndex('posts', 'post_title_idx', { transaction: t });
 				await queryInterface.removeIndex('posts', 'post_datetime_idx', { transaction: t });
