@@ -1,6 +1,23 @@
+const fs = require('fs');
+const multer = require('multer');
+
 const { Role, sequelize } = require('./../models');
 const { OK, CREATED, BAD_REQUEST, NO_CONTENT } = require('./../helpers/status_codes');
 const AppError = require('./../utils/appError');
+
+const profilePreviousImageDeleter = async userId => {
+   const allProfileImages = fs.readdirSync('public/images/users');
+   const userProfileImages = [];
+   allProfileImages.forEach(image => {
+      if (image.startsWith(`user-${userId}`)) {
+         userProfileImages.push(`public/images/users/${image}`);
+      }
+   })
+   userProfileImages.pop();
+   userProfileImages.forEach(image => {
+      fs.unlink(image, err => { if (err) throw err })
+   });
+}
 
 exports.createOne = Model => async (req, res) => {
    const t = await sequelize.transaction();
@@ -11,13 +28,13 @@ exports.createOne = Model => async (req, res) => {
       }
       const datum = await Model.create(req.body, { transaction: t });
       res.status(CREATED).json({
-         status: 'Success',
+         status: 'Succès',
          data: { datum }
       });
       await t.commit();
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Fail to create the data!',
+         status: 'Échec de la création de l\'utilisateur !',
          message: err.message
       });
       await t.rollback();
@@ -31,12 +48,12 @@ exports.getOne = Model => async (req, res) => {
          where: { id: req.params.id }
       });
       res.status(OK).json({
-         status: 'Success',
+         status: 'Succès',
          data: { datum }
       });
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Fail to get the datum!',
+         status: 'Échec de l\'obtention des données !',
          message: err.message
       });
    }
@@ -52,13 +69,13 @@ exports.updateOne = Model => async (req, res) => {
       );
       const newDatum = await Model.findByPk(req.params.id);
       res.status(OK).json({
-         status: 'Success',
+         status: 'Succès',
          data: { newDatum }
       });
       await t.commit();
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Fail to update the datum!',
+         status: 'Échec de la mise à jour des données de l\'utilisateur !',
          message: err.message
       });
       await t.rollback();
@@ -72,13 +89,13 @@ exports.deleteOne = Model => async (req, res) => {
          where: { id: req.params.id }
       }, { transaction: t });
       res.status(NO_CONTENT).json({
-         status: 'Success',
+         status: 'Succès',
          data: null
       })
       await t.commit();
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Fail to delete the datum!',
+         status: 'Échec de l\'effacement de l\'utilisateur !',
          message: err.message
       });
       await t.rollback();
@@ -134,65 +151,101 @@ exports.getAll = Model => async (req, res) => {
       /* Make the request with myQuery */
       const data = await Model.findAll(myQuery);
       res.status(OK).json({
-         status: 'Success',
+         status: 'Succès',
          results: data.length,
          data: { data }
       });
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Fail to get the data!',
+         status: 'Échec de l\'obtention des données !',
          message: err.message
       });
    }
 }
 
 exports.getMyProfile = fn => async (req, res) => {
-   const user = await fn(req.user.id);
-
-   res.status(OK).json({
-      status: 'Success',
-      data: { user }
-   });
+   try {
+      const user = await fn(req.user.id);
+      res.status(OK).json({
+         status: 'Succès',
+         data: { user }
+      });
+   } catch (err) {
+      res.status(BAD_REQUEST).json({
+         status: 'Échec de l\'obtention des données !',
+         message: err.message
+      });
+   }
 }
 
 exports.updateMyProfile = Model => async (req, res, next) => {
+   // console.log('req.user.id------------', req.user.id);
+   // console.log('req.file------------', req.file);
+   // console.log('req.body------------', req.body);
    const t = await sequelize.transaction();
    try {
       if (req.body.password || req.body.pass_confirm) {
-         return next(new AppError('This route is not for updating your password. Please use the dedicated "Change my password" option!', BAD_REQUEST));
+         return next(new AppError('Cette route n\'est pas faite pour modifier votre mot de passe. Veuillez utiliser l\'option "Changer de mot de passe" !', BAD_REQUEST));
       }
-      
+
       let filteredReqBody = {};
       if (Model.name === 'Member') {
-         const allowedFields = ['family_name', 'first_name', 'email', 'biography', 'address', 'country', 'title', 'speciality', 'hobby'];
+         const allowedFields = ['family_name', 'first_name', 'email', 'biography', 'address01', 'address02', 'address03', 'country', 'title', 'speciality', 'hobby'];
          Object.keys(req.body).forEach(field => {
             if (allowedFields.includes(field)) filteredReqBody[field] = req.body[field];
          });
       }
       if (Model.name === 'Donor') {
-         const allowedFields = ['family_name', 'first_name', 'email', 'address', 'country', 'firm'];
+         const allowedFields = ['family_name', 'first_name', 'email', 'address01', 'address02', 'address03', 'country', 'firm'];
          Object.keys(req.body).forEach(field => {
             if (allowedFields.includes(field)) filteredReqBody[field] = req.body[field];
          });
       }
-      
+      if (req.file) filteredReqBody.photo_url = `images/users/${req.file.filename}`;
       await Model.update(
          filteredReqBody,
          { where: { id: req.user.id } },
          { transaction: t }
       );
+
+      await profilePreviousImageDeleter(req.user.id);
+
       const updatedUser = await Model.findByPk(req.user.id);
       res.status(OK).json({
-         status: 'Success',
-         data: { updatedUser }
+         status: 'Succès',
+         data: { user: updatedUser }
       });
       await t.commit();
 
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Fail to update the member!',
+         status: 'Échec de la mise à jour du membre !',
          message: err.message
       });
       await t.rollback();
    }
 }
+
+const multerStorage = multer.diskStorage({
+   destination: (req, file, cb) => {
+      cb(null, 'public/images/users');
+   },
+   filename: (req, file, cb) => {
+      const ext = file.mimetype.split('/')[1];
+      cb(null, `user-${req.user.id}--${Date.now()}.${ext}`)
+   }
+});
+
+const multerFilter = (req, file, cb) => {
+   if (file.mimetype.startsWith('image')) {
+      cb(null, true);
+   } else {
+      cb(new AppError('Votre fichier n\'est pas une image. Veuillez choisir une image pour votre profil !', 400), false)
+   }
+}
+const upload = multer({
+   storage: multerStorage,
+   fileFilter: multerFilter
+});
+
+exports.updateMyProfilePhoto = upload.single('photo_url');

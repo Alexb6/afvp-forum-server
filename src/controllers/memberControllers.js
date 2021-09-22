@@ -10,12 +10,15 @@ const getMemberProfileInfos = async (id) => {
          'first_name',
          'family_name',
          'email',
-         'address',
+         'address01',
+         'address02',
+         'address03',
          'country',
          'title',
          'speciality',
          'biography',
-         'hobby'
+         'hobby',
+         'photo_url'
       ]
    });
    return user;

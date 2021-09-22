@@ -1,4 +1,5 @@
 const express = require('express');
+
 const {
    getAllMember,
    getMember,
@@ -17,6 +18,7 @@ const {
    updateMyProfileMember
 } = require('./../controllers/memberControllers');
 const { restrictTo, logoutOne } = require('./../controllers/authControllers');
+const { updateMyProfilePhoto } = require('./../controllers/factoryControllers');
 
 const router = express.Router();
 
@@ -32,7 +34,7 @@ router.use(tokenProtectMember);
 router.post('/logout', logoutOne);
 router.patch('/update-my-password', updateMyPasswordMember);
 router.get('/profile', getMyProfileMember);
-router.patch('/profile/update-profile', updateMyProfileMember);
+router.patch('/profile/update-profile', updateMyProfilePhoto, updateMyProfileMember);
 router.route('/')
    .get(getAllMember);
 router.route('/:id')

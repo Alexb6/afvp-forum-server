@@ -10,9 +10,12 @@ const getDonorProfileInfos = async (id) => {
          'first_name',
          'family_name',
          'email',
-         'address',
+         'address01',
+         'address02',
+         'address03',
          'country',
-         'firm'
+         'firm',
+         'photo_url'
       ]
    });
    return user;

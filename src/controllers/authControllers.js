@@ -3,9 +3,9 @@ const crypto = require('crypto');
 const randtoken = require('rand-token');
 const moment = require('moment');
 const ms = require('ms');
-
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+
 const { Role, sequelize } = require('./../models');
 const { Op } = require("sequelize");
 const AppError = require('./../utils/appError');
@@ -69,7 +69,7 @@ const createAndSendTokens = async (aUser, statusCode, res, Model) => {
    const user = removeUserFileds(aUser);
 
    res.status(statusCode).json({
-      status: 'Success',
+      status: 'Succès',
       data: { token: { accessToken, accessTokenRefreshInterval }, user }
    });
 }
@@ -92,7 +92,7 @@ const sendAndClearTokens = async (statusCode, res) => {
    res.cookie('refreshToken', '', refreshCookieOptions);
 
    res.status(statusCode).json({
-      status: 'Success',
+      status: 'Succès',
       data: { token: { accessToken, accessTokenRefreshInterval } }
    });
 }
@@ -102,7 +102,7 @@ const verifyToken = (token, xsrfToken = '') => {
       const signKey = process.env.JWT_SECRET + xsrfToken;
       return jwt.verify(token, signKey);
    } catch (err) {
-      return new AppError('The token is invalid or has expired!', UNAUTHORIZED)
+      return new AppError('Votre jeton n\'est pas valide ou a expiré !', UNAUTHORIZED)
    }
 }
 
@@ -151,14 +151,14 @@ exports.signUpOne = Model => async (req, res, next) => {
       const newUser = await Model.create(req.body, { transaction: t });
       const user = removeUserFileds(newUser);
       res.status(CREATED).json({
-         status: 'Success',
+         status: 'Succès',
          data: { user }
       })
 
       await t.commit();
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Fail to create the user!',
+         status: 'Échec de la création de l\'utilisateur !',
          message: err.message
       });
       await t.rollback();
@@ -172,7 +172,7 @@ exports.loginOne = Model => async (req, res, next) => {
       // }   
       const user = await Model.findOne({
          where: { email: req.body.email },
-         attributes: ['id', 'email', 'first_name', 'family_name', 'password']
+         attributes: ['id', 'email', 'first_name', 'family_name', 'password', 'photo_url']
       });
       if (!user) {
          return next(new AppError('Votre courriel ou votre mot de passe est incorrect !', UNAUTHORIZED));
@@ -186,7 +186,7 @@ exports.loginOne = Model => async (req, res, next) => {
       createAndSendTokens(user, OK, res, Model);
    } catch (err) {
       res.status(UNAUTHORIZED).json({
-         status: 'Fail to login!',
+         status: 'Échec du processus de connexion !',
          message: err.message
       })
    }
@@ -196,13 +196,13 @@ exports.logoutOne = async (req, res, next) => {
    try {
       const user = req.user;
       if (!user) {
-         return next(new AppError('To logout you have to be logged in!', UNAUTHORIZED));
+         return next(new AppError('Pour se déconnecter, vous devez d\'abord être connecté !', UNAUTHORIZED));
       }
 
       sendAndClearTokens(OK, res);
    } catch (err) {
       res.status(UNAUTHORIZED).json({
-         status: 'Fail to logout!',
+         status: 'Échec de la déconnexion !',
          message: err.message
       })
    }
@@ -216,7 +216,7 @@ exports.tokenProtect = Model => async (req, res, next) => {
       }
       const xsrfToken = req.headers.xsrftoken;
       if (!accessToken || !xsrfToken) {
-         return next(new AppError('Please log in to get access!', UNAUTHORIZED));
+         return next(new AppError('Veuillez vous connecter pour accéder à cette donnée !', UNAUTHORIZED));
       }
 
       const accessTokenPayload = verifyToken(accessToken, xsrfToken);
@@ -229,15 +229,16 @@ exports.tokenProtect = Model => async (req, res, next) => {
             'family_name',
             'email',
             'pass_changed_dt',
-            'role_id'
+            'role_id',
+            'photo_url'
          ]
       });
       if (!currentUser) {
-         return next(new AppError('The user with this token does no longer exist!', FORBIDDEN));
+         return next(new AppError('L\'utilisateur qui possède ce token n\'existe plus !', FORBIDDEN));
       }
 
       if (passwordChangedDate(currentUser.pass_changed_dt, accessTokenPayload.iat)) {
-         return next(new AppError('The user has recently changed password. Please login again!', UNAUTHORIZED));
+         return next(new AppError('L\'utilisateur a récemment changé de mot de passe. Veuillez vous connecter à nouveau !', UNAUTHORIZED));
       }
 
       // const userRole = await Role.findOne({
@@ -248,7 +249,7 @@ exports.tokenProtect = Model => async (req, res, next) => {
 
    } catch (err) {
       res.status(UNAUTHORIZED).json({
-         status: 'Fail',
+         status: 'Échec',
          message: err.message
       })
    }
@@ -260,7 +261,7 @@ exports.checkRefreshAndSendTokens = Model => async (req, res, next) => {
       const refreshToken = req.cookies.refreshToken;
       const xsrfToken = req.headers.xsrftoken;
       if (!refreshToken || !xsrfToken) {
-         return next(new AppError('Your token is nonexistent. Please login!', NO_CONTENT));
+         return next(new AppError('Votre jeton n\'existe pas. Veuillez vous connecter !', NO_CONTENT));
       }
 
       const refreshTokenPayload = jwt.verify(refreshToken, process.env.JWT_SECRET);
@@ -270,17 +271,19 @@ exports.checkRefreshAndSendTokens = Model => async (req, res, next) => {
             'id',
             'first_name',
             'family_name',
-            'email']
+            'email',
+            'photo_url'
+         ]
       });
 
       if (!currentUser) {
-         return next(new AppError('The user with this token does no longer exist!', UNAUTHORIZED));
+         return next(new AppError('Le propriétaire de ce jeton n\'existe plus. Veuillez vous connecter à nouveau !', UNAUTHORIZED));
       }
 
       createAndSendTokens(currentUser, OK, res, Model);
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Fail',
+         status: 'Échec',
          message: err.message
       })
    }
@@ -289,7 +292,7 @@ exports.checkRefreshAndSendTokens = Model => async (req, res, next) => {
 exports.restrictTo = (...roles) => {
    return (req, res, next) => {
       if (!roles.includes(req.user.role)) {
-         return next(new AppError('You do not have the authrorisation to perform this action!', FORBIDDEN));
+         return next(new AppError('Vous n\'avez pas l\'autorisation pour effectuer cette action !', FORBIDDEN));
       }
       next();
    }
@@ -302,7 +305,7 @@ exports.forgotPassword = Model => async (req, res, next) => {
          attributes: ['id', 'first_name', 'family_name', 'email', 'pass_reset_token', 'pass_reset_expired_dt']
       });
       if (!user) {
-         return next(new AppError('There is no user with this email address!', NOT_FOUND));
+         return next(new AppError('Il n\'y a pas d\'utilisateur avec ce courriel !', NOT_FOUND));
       }
 
       const resetToken = await createPasswordResetToken(user);
@@ -320,20 +323,20 @@ exports.forgotPassword = Model => async (req, res, next) => {
             message
          })
          res.status(OK).json({
-            status: 'Success',
-            message: 'A link to reset the password has been sent to user!'
+            status: 'Succès',
+            message: 'Un lien pour réinitialiser le mot de passe a été envoyé à l\'utilisateur !'
          })
       } catch (err) {
          user.pass_reset_token = null;
          user.pass_reset_expired_dt = null;
          await user.save();
 
-         return next(new AppError('There is an error sending the email. Please try again later!', SERVER_ERROR));
+         return next(new AppError('Une erreur s\'est produite lors de l\'envoi du courriel. Veuillez essayer plus tard !', SERVER_ERROR));
       }
 
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Unable to process your request. Please try again later!',
+         status: 'Impossibilité de traiter votre demande. Veuillez essayer plus tard !',
          message: err.message
       })
    }
@@ -362,7 +365,7 @@ exports.resetPassword = Model => async (req, res, next) => {
       });
 
       if (!user) {
-         return next(new AppError('The reset token is invalid or has expired!', UNAUTHORIZED));
+         return next(new AppError('Votre jeton de réinitialisation n\'est pas valide ou a expiré !', UNAUTHORIZED));
       }
       user.password = await hashPassword(req.body.password);
       user.pass_confirm = user.password;
@@ -374,7 +377,7 @@ exports.resetPassword = Model => async (req, res, next) => {
       createAndSendTokens(user, OK, res, Model);
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Unable to process your request. Please try again later!',
+         status: 'Impossibilité de traiter votre demande. Veuillez essayer plus tard !',
          message: err.message
       })
    }
@@ -398,7 +401,7 @@ exports.updateMyPassword = Model => async (req, res, next) => {
 
       const correctPassword = await comparePassword(req.body.password_current, user.password);
       if (!correctPassword) {
-         return next(new AppError('You entered a wrong current password! Please give the right password.', UNAUTHORIZED));
+         return next(new AppError('Le mot de passe entré n\'est pas correct! Veuillez entrer le bon mot de passe.', UNAUTHORIZED));
       }
 
       user.password = await hashPassword(req.body.password);
@@ -410,7 +413,7 @@ exports.updateMyPassword = Model => async (req, res, next) => {
       await t.commit();
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Unable to process your request. Please try again later!',
+         status: 'Impossibilité de traiter votre demande. Veuillez essayer plus tard !',
          message: err.message
       });
       await t.rollback();

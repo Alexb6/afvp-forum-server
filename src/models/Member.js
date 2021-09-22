@@ -81,10 +81,16 @@ module.exports = (sequelize, DataTypes) => {
 		pass_reset_expired_dt: {
 			type: DataTypes.DATE
 		},
-		photo: {
+		photo_url: {
 			type: DataTypes.STRING
 		},
-		address: {
+		address01: {
+			type: DataTypes.STRING
+		},
+		address02: {
+			type: DataTypes.STRING
+		},
+		address03: {
 			type: DataTypes.STRING
 		},
 		country: {

@@ -1,5 +1,4 @@
 const express = require('express');
-const path = require('path');
 const morgan = require('morgan');
 const cors = require('./cors');
 const cookieParser = require('cookie-parser');
@@ -37,7 +36,7 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.options('*', cors);
 app.use(cors);
 /* Using static file from the public folder */
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static('public'));
 /* Sanitize user input from POST body, GET queries, and url params */
 app.use(xss());
 /* Prevent HTTP Parameter Pollution */
