@@ -356,6 +356,7 @@ exports.resetPassword = Model => async (req, res, next) => {
             'first_name',
             'family_name',
             'email',
+            'photo_url',
             'password',
             'pass_confirm',
             'pass_changed_dt',
@@ -393,6 +394,7 @@ exports.updateMyPassword = Model => async (req, res, next) => {
             'first_name',
             'family_name',
             'email',
+            'photo_url',
             'password',
             'pass_confirm',
             'pass_changed_dt'
