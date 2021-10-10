@@ -24,6 +24,12 @@ module.exports = {
 				allowNull: false,
 				type: Sequelize.STRING(150)
 			},
+			email_verified: {
+				type: Sequelize.BOOLEAN
+			},
+			email_verification_token: {
+				type: Sequelize.STRING(255),
+			},
 			password: {
 				allowNull: false,
 				type: Sequelize.STRING(255)
@@ -87,6 +93,9 @@ module.exports = {
 			donor: {
 				type: Sequelize.BOOLEAN
 			},
+			board_member: {
+				type: Sequelize.BOOLEAN
+			},
 			role_id: {
 				type: Sequelize.UUID
 			},
@@ -101,9 +110,9 @@ module.exports = {
 				allowNull: false,
 				type: Sequelize.DATE
 			},
-			deleted_at: {
+			deactivated_at: {
 				type: Sequelize.DATE,
-				comment: 'Member soft deletion date'
+				comment: 'Member deactivation date'
 			}
 		});
 	},

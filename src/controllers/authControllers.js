@@ -9,7 +9,7 @@ const bcrypt = require('bcrypt');
 const { Role, sequelize } = require('./../models');
 const { Op } = require("sequelize");
 const AppError = require('./../utils/appError');
-const sendEmail = require('./../utils/nodeMailer');
+const sendEmail = require('./../utils/sendEmail');
 const { OK, CREATED, NO_CONTENT, BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, SERVER_ERROR, UNPROCESSABLE_ENTITY } = require('./../helpers/status_codes');
 
 const hashPassword = async password => {
@@ -55,7 +55,7 @@ const createAndSendTokens = async (aUser, statusCode, res, Model) => {
       ...cookieOptions,
       httpOnly: true
    };
-   if (process.env.NODE_ENV === 'production') refreshCookieOptions.secure = true; console.log(Model);
+   if (process.env.NODE_ENV === 'production') refreshCookieOptions.secure = true;
 
    if (Model) {
       if (Model.name === 'Member') res.cookie('userResource', 'members', cookieOptions);
@@ -102,7 +102,7 @@ const verifyToken = (token, xsrfToken = '') => {
       const signKey = process.env.JWT_SECRET + xsrfToken;
       return jwt.verify(token, signKey);
    } catch (err) {
-      return new AppError('Votre jeton n\'est pas valide ou a expiré !', UNAUTHORIZED)
+      return new AppError(`Votre token n'est pas valide ou a expiré !`, UNAUTHORIZED)
    }
 }
 
@@ -136,17 +136,44 @@ exports.signUpOne = Model => async (req, res, next) => {
          attributes: ['id', 'email', 'first_name', 'family_name']
       });
       if (existingUser) {
-         return next(new AppError('Un utilisateur avec ce courriel existe déjà ! Si vous êtes inscrit, veuillez vous connecter à votre espace.', UNPROCESSABLE_ENTITY));
+         return next(new AppError(`Un utilisateur avec ce courriel existe déjà ! Si vous êtes inscrit, veuillez vous connecter à votre espace.`, UNPROCESSABLE_ENTITY));
       }
 
       if (Model.name === 'Donor') {
-         const role = await Role.findOne({ where: { name: 'donator' } });
+         const role = await Role.findOne({ where: { name: 'donateur' } });
          req.body.role_id = role.id;
       }
-      (req.body.gender === 'Monsieur' || 'Ông') ? req.body.gender = 'Mr' : req.body.gender = 'Mrs';
+      if (req.body.gender === 'Monsieur') req.body.gender = 'Mr';
+      if (req.body.gender === 'Ông') req.body.gender = 'Mr';
+      if (req.body.gender === 'Madame') req.body.gender = 'Mrs';
+      if (req.body.gender === 'Bà') req.body.gender = 'Mrs';
+      else req.body.gender = 'Mr';
 
       req.body.password = await hashPassword(req.body.password);
       req.body.pass_confirm = req.body.password;
+
+      let emailVerificationToken;
+      if (Model.name === 'Member') emailVerificationToken = crypto.randomBytes(48).toString('hex');
+      if (Model.name === 'Donor') emailVerificationToken = crypto.randomBytes(32).toString('hex');   
+      req.body.email_verification_token = emailVerificationToken;
+      let frontendHost;
+      if (process.env.NODE_ENV === 'development') {
+         frontendHost = 'localhost:3000'
+      } else {
+         frontendHost = '' // put production host here
+      }
+      const emailVerificationUrl = `${req.protocol}://${frontendHost}/verify-email/${emailVerificationToken}`;
+      const message = `Vous recevez ce courriel suite à votre demande d'inscription sue le site de l'association AFVP. Veuillez cliquer sur ce lien pour confirmer votre courriel. \n\n${emailVerificationUrl}\n\nSi vous n'avez pas demandé une inscription à l'association, veuillez ignorer ce message.\nCe courriel est envoyé par un service automatique, n'envoyez pas de réponse !`;
+      try {
+         await sendEmail({
+            // email: req.body.email,
+            email: 'notifications@afvp.net',
+            subject: 'Confirmation de votre courriel',
+            message
+         })
+      } catch (err) {
+         return next(new AppError(`Une erreur s\'est produite lors de l\'envoi du courriel de vérification. Veuillez essayer plus tard !`, SERVER_ERROR));
+      }
 
       const newUser = await Model.create(req.body, { transaction: t });
       const user = removeUserFileds(newUser);
@@ -158,7 +185,41 @@ exports.signUpOne = Model => async (req, res, next) => {
       await t.commit();
    } catch (err) {
       res.status(BAD_REQUEST).json({
-         status: 'Échec de la création de l\'utilisateur !',
+         status: 'Échec de la création du compte de l\'utilisateur !',
+         message: err.message
+      });
+      await t.rollback();
+   }
+}
+
+exports.verifyEmailOne = Model => async (req, res, next) => {
+   const t = await sequelize.transaction();
+   try {
+      const user = await Model.findOne({
+         where: { email_verification_token: req.params.token },
+         attributes: ['id', 'email', 'first_name', 'family_name', 'photo_url', 'email_verified']
+      });
+      if (!user) {
+         return next(new AppError(`Le token de vérification de votre courriel est incorrect ! Contactez-nous à ce courriel : contact@afvp.net`, UNAUTHORIZED))
+      }
+      if (user.email_verified) {
+         return next(new AppError(`Votre courriel est déjà verifié. Vous pouvez vous connecter à votre espace personnel.`, BAD_REQUEST))
+      }
+      user.email_verified = true;
+      await user.save({ validate: false });
+
+      const verifiedUser = await Model.findOne({
+         where: { email_verification_token: req.params.token },
+         attributes: ['id', 'email', 'first_name', 'family_name', 'photo_url', 'email_verified']
+      });
+
+      res.status(200).json({
+         status: 'Succès',
+         data: { user: verifiedUser }
+      })
+   } catch (err) {
+      res.status(BAD_REQUEST).json({
+         status: 'Échec de la vérification du courriel !',
          message: err.message
       });
       await t.rollback();
@@ -172,15 +233,18 @@ exports.loginOne = Model => async (req, res, next) => {
       // }   
       const user = await Model.findOne({
          where: { email: req.body.email },
-         attributes: ['id', 'email', 'first_name', 'family_name', 'password', 'photo_url']
+         attributes: ['id', 'email', 'first_name', 'family_name', 'password', 'photo_url', 'email_verified']
       });
       if (!user) {
-         return next(new AppError('Votre courriel ou votre mot de passe est incorrect !', UNAUTHORIZED));
+         return next(new AppError(`Votre courriel ou votre mot de passe est incorrect !`, UNAUTHORIZED));
+      }
+      if (!user.email_verified) {
+         return next(new AppError(`Pour se connecter à votre espace personnel, veuillez d'abord valider votre courriel grâce au lien que nous avons envoyé !`, UNAUTHORIZED))
       }
 
       const correctPassword = await comparePassword(req.body.password, user.password);
       if (!correctPassword) {
-         return next(new AppError('Votre courriel ou votre mot de passe est incorrect !', UNAUTHORIZED));
+         return next(new AppError(`Votre courriel ou votre mot de passe est incorrect !`, UNAUTHORIZED));
       }
 
       createAndSendTokens(user, OK, res, Model);
@@ -196,7 +260,7 @@ exports.logoutOne = async (req, res, next) => {
    try {
       const user = req.user;
       if (!user) {
-         return next(new AppError('Pour se déconnecter, vous devez d\'abord être connecté !', UNAUTHORIZED));
+         return next(new AppError(`Pour se déconnecter, vous devez d'abord être connecté !`, BAD_REQUEST));
       }
 
       sendAndClearTokens(OK, res);
@@ -216,7 +280,7 @@ exports.tokenProtect = Model => async (req, res, next) => {
       }
       const xsrfToken = req.headers.xsrftoken;
       if (!accessToken || !xsrfToken) {
-         return next(new AppError('Veuillez vous connecter pour accéder à cette donnée !', UNAUTHORIZED));
+         return next(new AppError(`Veuillez vous connecter pour accéder à cette donnée !`, UNAUTHORIZED));
       }
 
       const accessTokenPayload = verifyToken(accessToken, xsrfToken);
@@ -234,11 +298,11 @@ exports.tokenProtect = Model => async (req, res, next) => {
          ]
       });
       if (!currentUser) {
-         return next(new AppError('L\'utilisateur qui possède ce token n\'existe plus !', FORBIDDEN));
+         return next(new AppError(`L'utilisateur qui possède ce token n\'existe plus !`, FORBIDDEN));
       }
 
       if (passwordChangedDate(currentUser.pass_changed_dt, accessTokenPayload.iat)) {
-         return next(new AppError('L\'utilisateur a récemment changé de mot de passe. Veuillez vous connecter à nouveau !', UNAUTHORIZED));
+         return next(new AppError(`L'utilisateur a récemment changé de mot de passe. Veuillez vous connecter à nouveau !`, UNAUTHORIZED));
       }
 
       // const userRole = await Role.findOne({
@@ -261,7 +325,7 @@ exports.checkRefreshAndSendTokens = Model => async (req, res, next) => {
       const refreshToken = req.cookies.refreshToken;
       const xsrfToken = req.headers.xsrftoken;
       if (!refreshToken || !xsrfToken) {
-         return next(new AppError('Votre jeton n\'existe pas. Veuillez vous connecter !', NO_CONTENT));
+         return next(new AppError(`Votre token n'existe pas. Veuillez vous connecter !`, NO_CONTENT));
       }
 
       const refreshTokenPayload = jwt.verify(refreshToken, process.env.JWT_SECRET);
@@ -277,7 +341,7 @@ exports.checkRefreshAndSendTokens = Model => async (req, res, next) => {
       });
 
       if (!currentUser) {
-         return next(new AppError('Le propriétaire de ce jeton n\'existe plus. Veuillez vous connecter à nouveau !', UNAUTHORIZED));
+         return next(new AppError(`Le propriétaire de ce token n'existe plus. Veuillez vous connecter à nouveau !`, UNAUTHORIZED));
       }
 
       createAndSendTokens(currentUser, OK, res, Model);
@@ -292,7 +356,7 @@ exports.checkRefreshAndSendTokens = Model => async (req, res, next) => {
 exports.restrictTo = (...roles) => {
    return (req, res, next) => {
       if (!roles.includes(req.user.role)) {
-         return next(new AppError('Vous n\'avez pas l\'autorisation pour effectuer cette action !', FORBIDDEN));
+         return next(new AppError(`Vous n'avez pas l'autorisation pour effectuer cette action !`, FORBIDDEN));
       }
       next();
    }
@@ -305,7 +369,7 @@ exports.forgotPassword = Model => async (req, res, next) => {
          attributes: ['id', 'first_name', 'family_name', 'email', 'pass_reset_token', 'pass_reset_expired_dt']
       });
       if (!user) {
-         return next(new AppError('Il n\'y a pas d\'utilisateur avec ce courriel !', NOT_FOUND));
+         return next(new AppError(`Il n'y a pas d'utilisateur avec ce courriel !`, NOT_FOUND));
       }
 
       const resetToken = await createPasswordResetToken(user);
@@ -331,7 +395,7 @@ exports.forgotPassword = Model => async (req, res, next) => {
          user.pass_reset_expired_dt = null;
          await user.save();
 
-         return next(new AppError('Une erreur s\'est produite lors de l\'envoi du courriel. Veuillez essayer plus tard !', SERVER_ERROR));
+         return next(new AppError(`Une erreur s'est produite lors de l'envoi du courriel pour réinitialiser le mot de passe. Veuillez essayer plus tard !`, SERVER_ERROR));
       }
 
    } catch (err) {
@@ -366,7 +430,7 @@ exports.resetPassword = Model => async (req, res, next) => {
       });
 
       if (!user) {
-         return next(new AppError('Votre jeton de réinitialisation n\'est pas valide ou a expiré !', UNAUTHORIZED));
+         return next(new AppError(`Votre token de réinitialisation n'est pas valide ou a expiré !`, UNAUTHORIZED));
       }
       user.password = await hashPassword(req.body.password);
       user.pass_confirm = user.password;
@@ -403,7 +467,7 @@ exports.updateMyPassword = Model => async (req, res, next) => {
 
       const correctPassword = await comparePassword(req.body.password_current, user.password);
       if (!correctPassword) {
-         return next(new AppError('Le mot de passe entré n\'est pas correct! Veuillez entrer le bon mot de passe.', UNAUTHORIZED));
+         return next(new AppError(`Le mot de passe entré n'est pas correct! Veuillez entrer le bon mot de passe.`, UNAUTHORIZED));
       }
 
       user.password = await hashPassword(req.body.password);
@@ -419,5 +483,23 @@ exports.updateMyPassword = Model => async (req, res, next) => {
          message: err.message
       });
       await t.rollback();
+   }
+}
+
+exports.testSendEmail = async (req, res) => {
+   try {
+      await sendEmail({
+         email: 'notifications@afvp.net',
+         subject: 'Confirmation de votre courriel',
+         message: 'Email test sending!'
+      });
+      res.status(OK).json({
+         status: 'Succès'
+      })
+   } catch (err) {
+      res.status(SERVER_ERROR).json({
+         status: 'Fail',
+         message: err.message
+      });
    }
 }

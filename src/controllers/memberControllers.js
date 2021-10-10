@@ -26,6 +26,8 @@ const getMemberProfileInfos = async (id) => {
 
 exports.signUpMember = authControllers.signUpOne(Member);
 
+exports.verifyEmailMember = authControllers.verifyEmailOne(Member);
+
 exports.getMember = factoryControllers.getOne(Member);
 
 exports.updateMember = factoryControllers.updateOne(Member);

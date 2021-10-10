@@ -5,18 +5,8 @@ const { Role, sequelize } = require('./../models');
 const { OK, CREATED, BAD_REQUEST, NO_CONTENT } = require('./../helpers/status_codes');
 const AppError = require('./../utils/appError');
 
-const profilePreviousImageDeleter = async userId => {
-   const allProfileImages = fs.readdirSync('public/images/users');
-   const userProfileImages = [];
-   allProfileImages.forEach(image => {
-      if (image.startsWith(`user-${userId}`)) {
-         userProfileImages.push(`public/images/users/${image}`);
-      }
-   })
-   userProfileImages.pop();
-   userProfileImages.forEach(image => {
-      fs.unlink(image, err => { if (err) throw err })
-   });
+const profilePreviousImageDeleter = async photoPath => {
+   fs.unlink(`public/${photoPath}`, err => { if (err) throw err });
 }
 
 exports.createOne = Model => async (req, res) => {
@@ -179,9 +169,6 @@ exports.getMyProfile = fn => async (req, res) => {
 }
 
 exports.updateMyProfile = Model => async (req, res, next) => {
-   // console.log('req.user.id------------', req.user.id);
-   // console.log('req.file------------', req.file);
-   // console.log('req.body------------', req.body);
    const t = await sequelize.transaction();
    try {
       if (req.body.password || req.body.pass_confirm) {
@@ -201,14 +188,19 @@ exports.updateMyProfile = Model => async (req, res, next) => {
             if (allowedFields.includes(field)) filteredReqBody[field] = req.body[field];
          });
       }
-      if (req.file) filteredReqBody.photo_url = `images/users/${req.file.filename}`;
+
+      let profilePreviousImage = '';
+      if (req.file) {
+         filteredReqBody.photo_url = `images/users/${req.file.filename}`;
+         req.user.photo_url && (profilePreviousImage = req.user.photo_url);
+      };
       await Model.update(
          filteredReqBody,
          { where: { id: req.user.id } },
          { transaction: t }
       );
 
-      await profilePreviousImageDeleter(req.user.id);
+      if (profilePreviousImage) await profilePreviousImageDeleter(profilePreviousImage);
 
       const updatedUser = await Model.findByPk(req.user.id);
       res.status(OK).json({

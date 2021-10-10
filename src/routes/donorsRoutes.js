@@ -6,6 +6,7 @@ const {
    deleteDonor,
    signUpDonor,
    loginDonor,
+   verifyEmailDonor,
    tokenProtectDonor,
    checkRefreshAndSendTokensDonor,
    forgotPasswordDonor,
@@ -18,6 +19,7 @@ const {
 const router = express.Router();
 
 router.post('/signup', signUpDonor);
+router.patch('/verify-email/:token', verifyEmailDonor);
 router.post('/login', loginDonor);
 router.post('/forgot-password', forgotPasswordDonor);
 router.post('/refresh-token', checkRefreshAndSendTokensDonor);

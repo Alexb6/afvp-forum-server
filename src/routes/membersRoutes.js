@@ -8,6 +8,7 @@ const {
    deactivateMember,
    restoreMember,
    signUpMember,
+   verifyEmailMember,
    loginMember,
    tokenProtectMember,
    checkRefreshAndSendTokensMember,
@@ -17,12 +18,14 @@ const {
    getMyProfileMember,
    updateMyProfileMember
 } = require('./../controllers/memberControllers');
-const { restrictTo, logoutOne } = require('./../controllers/authControllers');
+const { restrictTo, logoutOne, testSendEmail } = require('./../controllers/authControllers');
 const { updateMyProfilePhoto } = require('./../controllers/factoryControllers');
 
 const router = express.Router();
 
+// router.post('/test-email', testSendEmail);
 router.post('/signup', signUpMember);
+router.patch('/verify-email/:token', verifyEmailMember);
 router.post('/login', loginMember);
 router.post('/forgot-password', forgotPasswordMember);
 router.post('/refresh-token', checkRefreshAndSendTokensMember);

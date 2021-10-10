@@ -23,6 +23,8 @@ const getDonorProfileInfos = async (id) => {
 
 exports.signUpDonor = authControllers.signUpOne(Donor);
 
+exports.verifyEmailDonor = authControllers.verifyEmailOne(Donor);
+
 exports.getDonor = factoryControllers.getOne(Donor);
 
 exports.updateDonor = factoryControllers.updateOne(Donor);

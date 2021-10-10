@@ -56,6 +56,13 @@ module.exports = (sequelize, DataTypes) => {
 				len: [3, 150]
 			}
 		},
+		email_verified: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false
+		},
+		email_verification_token: {
+			type: DataTypes.STRING,
+		},
 		password: {
 			allowNull: false,
 			type: DataTypes.STRING,
@@ -116,7 +123,7 @@ module.exports = (sequelize, DataTypes) => {
 		},
 		is_active: {
 			type: DataTypes.BOOLEAN,
-			defaultValue: true
+			defaultValue: false
 		},
 		status: {
 			type: DataTypes.ENUM('tovalidate', 'inregistration', 'registered', 'rejected'),
@@ -124,6 +131,10 @@ module.exports = (sequelize, DataTypes) => {
 		},
 		donor: {
 			type: DataTypes.BOOLEAN
+		},
+		board_member: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false
 		},
 		role_id: {
 			type: DataTypes.UUID,
@@ -145,7 +156,7 @@ module.exports = (sequelize, DataTypes) => {
 			allowNull: false,
 			type: DataTypes.DATE
 		},
-		deleted_at: {
+		deactivated_at: {
 			type: DataTypes.DATE
 		},
 		full_name_slug: {

@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`member` (
   `family_name` VARCHAR(150) NOT NULL,
   `first_name` VARCHAR(150) NOT NULL,
   `email` VARCHAR(150) NOT NULL,
+  `email_verified` TINYINT,
+  `email_verification_token` VARCHAR(255),
   `password` VARCHAR(255) NOT NULL,
   `pass_confirm` VARCHAR(255) NOT NULL,
   `pass_changed_dt` DATETIME NULL DEFAULT NULL,
@@ -59,9 +61,10 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`member` (
   `is_active` TINYINT NULL DEFAULT NULL COMMENT 'Membership active status',
   `status` ENUM('tovalidate', 'inregistration', 'registered', 'rejected') NOT NULL COMMENT 'Statuses for the membership application process',
   `donor` TINYINT NULL DEFAULT NULL,
+  `board_member` TINYINT NULL DEFAULT NULL,
   `role_id` INT(11) NOT NULL,
   `subscription_id` INT(11) NOT NULL,
-  `deleted_at` DATE NULL DEFAULT NULL COMMENT 'Membership soft deletion date'
+  `deactivated_at` DATE NULL DEFAULT NULL COMMENT 'Member deactivation date'
   PRIMARY KEY (`id`)
 ) ENGINE = InnoDB;
 
@@ -104,6 +107,8 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`donor` (
   `family_name` VARCHAR(150) NOT NULL,
   `first_name` VARCHAR(150) NOT NULL,
   `email` VARCHAR(150) NOT NULL,
+  `email_verified` TINYINT,
+  `email_verification_token` VARCHAR(255),
   `password` VARCHAR(255) NOT NULL,
   `pass_confirm` VARCHAR(255) NOT NULL,
   `pass_reset_token` VARCHAR(255) NOT NULL,

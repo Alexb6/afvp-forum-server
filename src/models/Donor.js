@@ -53,6 +53,13 @@ module.exports = (sequelize, DataTypes) => {
 				len: [3, 255]
 			}
 		},
+		email_verified: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false
+		},
+		email_verification_token: {
+			type: DataTypes.STRING,
+		},
 		password: {
 			allowNull: false,
 			type: DataTypes.STRING,
