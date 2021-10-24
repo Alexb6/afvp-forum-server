@@ -100,7 +100,7 @@ exports.getAll = Model => async (req, res) => {
       const excludeParamsKeys = ['page', 'limit', 'sort', 'fields'];
       excludeParamsKeys.forEach(key => delete queryString[key]);
       if (Model.name === 'Member') {
-         queryString.is_active = true;
+         // queryString.is_active = true;
          myQuery.where = queryString;
       }
       /* Pagination with limit & page keys */

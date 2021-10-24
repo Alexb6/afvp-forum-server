@@ -118,13 +118,28 @@ const passwordChangedDate = (passChangedDate, jwtTimestamp) => {
    return false;
 }
 
-const createPasswordResetToken = async (user) => {
-   const resetToken = crypto.randomBytes(32).toString('hex');
+const createModelRelatedToken = Model => {
+   let modelRelatedToken;
+   if (Model.name === 'Member') modelRelatedToken = crypto.randomBytes(48).toString('hex');
+   if (Model.name === 'Donor') modelRelatedToken = crypto.randomBytes(32).toString('hex');
+   return modelRelatedToken;
+}
+
+const hashPasswordResetToken = async (resetToken, user) => {
    const hashResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
    user.pass_reset_token = hashResetToken;
    user.pass_reset_expired_dt = Date.now() + ms(process.env.PASSWORD_RESET_TOKEN_EXPIRES_IN);
    await user.save({ validate: false });
-   return resetToken;
+}
+
+const getFrontEndHost = () => {
+   let frontendHost;
+   if (process.env.NODE_ENV === 'development') {
+      frontendHost = 'localhost:3000'
+   } else {
+      frontendHost = '' // put production host here
+   }
+   return frontendHost;
 }
 
 
@@ -147,27 +162,19 @@ exports.signUpOne = Model => async (req, res, next) => {
       if (req.body.gender === 'Ông') req.body.gender = 'Mr';
       if (req.body.gender === 'Madame') req.body.gender = 'Mrs';
       if (req.body.gender === 'Bà') req.body.gender = 'Mrs';
-      else req.body.gender = 'Mr';
 
       req.body.password = await hashPassword(req.body.password);
       req.body.pass_confirm = req.body.password;
 
-      let emailVerificationToken;
-      if (Model.name === 'Member') emailVerificationToken = crypto.randomBytes(48).toString('hex');
-      if (Model.name === 'Donor') emailVerificationToken = crypto.randomBytes(32).toString('hex');   
+      const emailVerificationToken = createModelRelatedToken(Model);
       req.body.email_verification_token = emailVerificationToken;
-      let frontendHost;
-      if (process.env.NODE_ENV === 'development') {
-         frontendHost = 'localhost:3000'
-      } else {
-         frontendHost = '' // put production host here
-      }
+      const frontendHost = getFrontEndHost();
       const emailVerificationUrl = `${req.protocol}://${frontendHost}/verify-email/${emailVerificationToken}`;
-      const message = `Vous recevez ce courriel suite à votre demande d'inscription sue le site de l'association AFVP. Veuillez cliquer sur ce lien pour confirmer votre courriel. \n\n${emailVerificationUrl}\n\nSi vous n'avez pas demandé une inscription à l'association, veuillez ignorer ce message.\nCe courriel est envoyé par un service automatique, n'envoyez pas de réponse !`;
+      const message = `Vous recevez ce courriel suite à votre demande d'inscription sur le site de l'association AFVP. Veuillez cliquer sur ce lien pour confirmer votre courriel. \n\n${emailVerificationUrl}\n\nSi vous n'avez pas demandé une inscription à l'association, veuillez ignorer ce message.\nCe courriel est envoyé par un service automatique, n'envoyez pas de réponse !`;
       try {
          await sendEmail({
             // email: req.body.email,
-            email: 'notifications@afvp.net',
+            email: 'dev-notifications@afvp.net',
             subject: 'Confirmation de votre courriel',
             message
          })
@@ -371,24 +378,24 @@ exports.forgotPassword = Model => async (req, res, next) => {
       if (!user) {
          return next(new AppError(`Il n'y a pas d'utilisateur avec ce courriel !`, NOT_FOUND));
       }
+      
+      const resetToken = createModelRelatedToken(Model);
+      await hashPasswordResetToken(resetToken, user);
 
-      const resetToken = await createPasswordResetToken(user);
-
-      let endpoint;
-      if (Model.name === 'Member') endpoint = 'members';
-      if (Model.name === 'Donor') endpoint = 'donors';
-      const resetUrl = `${req.protocol}://${req.get('host')}/api/v1/${endpoint}/reset-password/${resetToken}`;
+      const frontendHost = getFrontEndHost();
+      const resetUrl = `${req.protocol}://${frontendHost}/reset-password/${resetToken}`;
       const message = `Vous recevez ce courriel suite à votre demande pour changer votre mot de passe. Veuillez suivre le lien ci-dessous pour le réinitialiser. Il est valide pendant 2 heures seulement !\n\n${resetUrl}\n\nSi vous n'avez pas oublié votre mot de passe, veuillez ignorer ce message.\nCe courriel est envoyé par un service automatique, n'envoyez pas de réponse !`;
 
       try {
          await sendEmail({
-            email: user.email,
+            // email: user.email,
+            email: 'dev-notifications@afvp.net',
             subject: 'Réinitialisation de votre mot de passe',
             message
          })
          res.status(OK).json({
             status: 'Succès',
-            message: 'Un lien pour réinitialiser le mot de passe a été envoyé à l\'utilisateur !'
+            message: `Un lien pour réinitialiser le mot de passe a été envoyé à votre courriel !`
          })
       } catch (err) {
          user.pass_reset_token = null;
@@ -408,8 +415,7 @@ exports.forgotPassword = Model => async (req, res, next) => {
 
 exports.resetPassword = Model => async (req, res, next) => {
    try {
-      const hashResetToken = crypto.createHash('sha256').update(req.params.resetToken).digest('hex');
-
+      const hashResetToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
       const user = await Model.findOne({
          where: {
             pass_reset_token: hashResetToken,
@@ -439,7 +445,10 @@ exports.resetPassword = Model => async (req, res, next) => {
       user.pass_changed_dt = Date.now() - 3000; // remove 3s to make sure this timestamp is anterior to the below jwt's timestamp
       await user.save();
 
-      createAndSendTokens(user, OK, res, Model);
+      res.status(OK).json({
+         status: 'Succès',
+         message: `Votre mot de passe a été réinitialisé avec succès !`
+      })
    } catch (err) {
       res.status(BAD_REQUEST).json({
          status: 'Impossibilité de traiter votre demande. Veuillez essayer plus tard !',
@@ -489,7 +498,7 @@ exports.updateMyPassword = Model => async (req, res, next) => {
 exports.testSendEmail = async (req, res) => {
    try {
       await sendEmail({
-         email: 'notifications@afvp.net',
+         email: 'dev-notifications@afvp.net',
          subject: 'Confirmation de votre courriel',
          message: 'Email test sending!'
       });
