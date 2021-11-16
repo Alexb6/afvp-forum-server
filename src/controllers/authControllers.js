@@ -1,7 +1,7 @@
 require('dotenv').config();
 const crypto = require('crypto');
 const randtoken = require('rand-token');
-const moment = require('moment');
+const daysjs = require('dayjs');
 const ms = require('ms');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -48,7 +48,7 @@ const createAndSendTokens = async (aUser, statusCode, res, Model) => {
    const refreshToken = createRefreshToken(aUser.id);
 
    const cookieOptions = {
-      expires: new Date(moment().add(ms(process.env.JWT_REFRESH_EXPIRES_IN), 'ms')),
+      expires: new Date(daysjs().add(ms(process.env.JWT_REFRESH_EXPIRES_IN), 'ms')),
       sameSite: 'lax'
    };
    const refreshCookieOptions = {
@@ -179,7 +179,7 @@ exports.signUpOne = Model => async (req, res, next) => {
             message
          })
       } catch (err) {
-         return next(new AppError(`Une erreur s\'est produite lors de l\'envoi du courriel de vérification. Veuillez essayer plus tard !`, SERVER_ERROR));
+         return next(new AppError(`Une erreur s'est produite lors de l'envoi du courriel de vérification. Veuillez essayer plus tard !`, SERVER_ERROR));
       }
 
       const newUser = await Model.create(req.body, { transaction: t });
