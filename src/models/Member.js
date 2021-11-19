@@ -10,10 +10,11 @@ module.exports = (sequelize, DataTypes) => {
 	class Member extends Model {
 		static associate(models) {
 			this.belongsTo(models.Role, { foreignKey: 'role_id' });
-			this.belongsTo(models.Subscription, { foreignKey: 'subscription_id' });
+			this.belongsTo(models.SubscriptionType, { foreignKey: 'subscriptiontype_id' });
 			this.hasMany(models.Category, { foreignKey: 'member_id' });
 			this.hasMany(models.Post, { foreignKey: 'member_id' });
 			this.hasMany(models.Donation, { foreignKey: 'member_id' });
+			this.hasMany(models.Subscription, { foreignKey: 'member_id' });
 		}
 	};
 	Member.init({
@@ -142,7 +143,7 @@ module.exports = (sequelize, DataTypes) => {
 				isUUID: 4
 			}
 		},
-		subscription_id: {
+		subscriptiontype_id: {
 			type: DataTypes.UUID,
 			validate: {
 				isUUID: 4

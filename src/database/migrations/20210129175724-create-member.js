@@ -99,7 +99,7 @@ module.exports = {
 			role_id: {
 				type: Sequelize.UUID
 			},
-			subscription_id: {
+			subscriptiontype_id: {
 				type: Sequelize.UUID
 			},
 			created_at: {

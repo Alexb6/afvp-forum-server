@@ -8,9 +8,11 @@ module.exports = {
 				primaryKey: true,
 				type: Sequelize.UUID,
 			},
-			name: {
-				allowNull: false,
-				type: Sequelize.STRING(45)
+			member_id: {
+				type: Sequelize.UUID
+			},
+			subscriptiontype_id: {
+				type: Sequelize.UUID
 			},
 			created_at: {
 				allowNull: false,

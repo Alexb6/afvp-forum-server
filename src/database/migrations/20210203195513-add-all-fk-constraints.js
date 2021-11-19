@@ -14,12 +14,30 @@ module.exports = {
 					transaction: t
 				});
 				await queryInterface.addConstraint('members', {
-					fields: ['subscription_id'],
+					fields: ['subscriptiontype_id'],
 					type: 'foreign key',
-					name: 'fk_memb_subscriptions_id_idx',
-					references: { table: 'subscriptions', field: 'id' },
+					name: 'fk_memb_subscriptiontypes_id_idx',
+					references: { table: 'subscriptiontypes', field: 'id' },
 					onUpdate: 'CASCADE',
 					onDelete: 'SET NULL',
+					transaction: t
+				});				
+				await queryInterface.addConstraint('subscriptions', {
+					fields: ['subscriptiontype_id'],
+					type: 'foreign key',
+					name: 'fk_subs_subscriptiontypes_id_idx',
+					references: { table: 'subscriptiontypes', field: 'id' },
+					onUpdate: 'CASCADE',
+					onDelete: 'SET NULL',
+					transaction: t
+				});
+				await queryInterface.addConstraint('subscriptions', {
+					fields: ['member_id'],
+					type: 'foreign key',
+					name: 'fk_subs_members_id_idx',
+					references: { table: 'members', field: 'id' },
+					onUpdate: 'CASCADE',
+					onDelete: 'CASCADE',
 					transaction: t
 				});
 				await queryInterface.addConstraint('categories', {
@@ -104,7 +122,9 @@ module.exports = {
 		try {
 			await queryInterface.sequelize.transaction(async t => {
 				await queryInterface.removeConstraint('members', 'fk_memb_roles_id_idx', { transaction: t });
-				await queryInterface.removeConstraint('members', 'fk_memb_subscriptions_id_idx', { transaction: t });
+				await queryInterface.removeConstraint('members', 'fk_memb_subscriptiontypes_id_idx', { transaction: t });
+				await queryInterface.removeConstraint('subscriptions', 'fk_subs_subscriptiontypes_id_idx', { transaction: t });
+				await queryInterface.removeConstraint('subscriptions', 'fk_subs_members_id_idx', { transaction: t });
 				await queryInterface.removeConstraint('categories', 'fk_cate_members_id_idx', { transaction: t });
 				await queryInterface.removeConstraint('posts', 'fk_post_members_id_idx', { transaction: t });
 				await queryInterface.removeConstraint('posts', 'fk_post_categories_id_idx', { transaction: t });

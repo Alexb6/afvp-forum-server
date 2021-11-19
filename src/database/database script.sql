@@ -10,9 +10,9 @@ USE `afvp_site`;
 -- -----------------------------------------------------
 -- Table `afvp_site`.`role`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `afvp_site`.`role`;
+DROP TABLE IF EXISTS `afvp_site`.`roles`;
 
-CREATE TABLE IF NOT EXISTS `afvp_site`.`role` (
+CREATE TABLE IF NOT EXISTS `afvp_site`.`roles` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NOT NULL,
   PRIMARY KEY (`id`)
@@ -21,9 +21,22 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`role` (
 -- -----------------------------------------------------
 -- Table `afvp_site`.`subscription`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `afvp_site`.`subscription`;
+DROP TABLE IF EXISTS `afvp_site`.`subscriptions`;
 
-CREATE TABLE IF NOT EXISTS `afvp_site`.`subscription` (
+CREATE TABLE IF NOT EXISTS `afvp_site`.`subscriptions` (
+  `id` INT NOT NULL,
+  `member_id` INT(11) NOT NULL,
+  `subscriptiontype_id` INT(11) NOT NULL,
+  `created_dt` DATE NULL DEFAULT NULL ,
+  PRIMARY KEY (`id`)
+) ENGINE = InnoDB;
+
+-- -----------------------------------------------------
+-- Table `afvp_site`.`subscription_type`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `afvp_site`.`subscription_types`;
+
+CREATE TABLE IF NOT EXISTS `afvp_site`.`subscription_types` (
   `id` INT NOT NULL,
   `name` VARCHAR(45) NOT NULL,
   PRIMARY KEY (`id`)
@@ -32,9 +45,9 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`subscription` (
 -- -----------------------------------------------------
 -- Table `afvp_site`.`member`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `afvp_site`.`member`;
+DROP TABLE IF EXISTS `afvp_site`.`members`;
 
-CREATE TABLE IF NOT EXISTS `afvp_site`.`member` (
+CREATE TABLE IF NOT EXISTS `afvp_site`.`members` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `gender` ENUM('Mr', 'Mrs') NOT NULL,
   `family_name` VARCHAR(150) NOT NULL,
@@ -63,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`member` (
   `donor` TINYINT NULL DEFAULT NULL,
   `board_member` TINYINT NULL DEFAULT NULL,
   `role_id` INT(11) NOT NULL,
-  `subscription_id` INT(11) NOT NULL,
+  `subscriptiontype_id` INT(11) NOT NULL,
   `deactivated_at` DATE NULL DEFAULT NULL COMMENT 'Member deactivation date'
   PRIMARY KEY (`id`)
 ) ENGINE = InnoDB;
@@ -71,9 +84,9 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`member` (
 -- -----------------------------------------------------
 -- Table `afvp_site`.`category`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `afvp_site`.`category`;
+DROP TABLE IF EXISTS `afvp_site`.`categories`;
 
-CREATE TABLE IF NOT EXISTS `afvp_site`.`category` (
+CREATE TABLE IF NOT EXISTS `afvp_site`.`categories` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(100) NOT NULL,
   `datetime` DATETIME NOT NULL,
@@ -84,9 +97,9 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`category` (
 -- -----------------------------------------------------
 -- Table `afvp_site`.`post`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `afvp_site`.`post`;
+DROP TABLE IF EXISTS `afvp_site`.`posts`;
 
-CREATE TABLE IF NOT EXISTS `afvp_site`.`post` (
+CREATE TABLE IF NOT EXISTS `afvp_site`.`posts` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(255) NOT NULL,
   `datetime` DATETIME NOT NULL,
@@ -101,7 +114,9 @@ CREATE TABLE IF NOT EXISTS `afvp_site`.`post` (
 -- -----------------------------------------------------
 -- Table `afvp_site`.`donor`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `afvp_site`.`donor` (
+DROP TABLE IF EXISTS `afvp_site`.`donors`;
+
+CREATE TABLE IF NOT EXISTS `afvp_site`.`donors` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `gender` ENUM('Mr', 'Mrs') NOT NULL,
   `family_name` VARCHAR(150) NOT NULL,
@@ -128,7 +143,9 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `afvp_site`.`payment_type`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `afvp_site`.`payment_type` (
+DROP TABLE IF EXISTS `afvp_site`.`payment_types`;
+
+CREATE TABLE IF NOT EXISTS `afvp_site`.`payment_types` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `type` VARCHAR(45) NOT NULL,
   PRIMARY KEY (`id`))
@@ -138,7 +155,9 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Table `afvp_site`.`donation`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `afvp_site`.`donation` (
+DROP TABLE IF EXISTS `afvp_site`.`donations`;
+
+CREATE TABLE IF NOT EXISTS `afvp_site`.`donations` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `date` DATETIME NOT NULL,
   `amount` DECIMAL(10,2) NOT NULL,
@@ -152,86 +171,93 @@ ENGINE = InnoDB;
 -- -----------------------------------------------------
 -- Indexes creation
 -- -----------------------------------------------------
-ALTER TABLE `afvp_site`.`member`
+ALTER TABLE `afvp_site`.`members`
   ADD INDEX `fk_memb_role_id_idx` (`role_id` ASC);
 
-ALTER TABLE `afvp_site`.`member`
+ALTER TABLE `afvp_site`.`members`
   ADD INDEX `fk_memb_subscription_id_idx` (`subscription_id` ASC);
 
-ALTER TABLE `afvp_site`.`member`
+ALTER TABLE `afvp_site`.`members`
   ADD INDEX `memb_name_idx` (`family_name` ASC, `first_name` ASC);
 
-ALTER TABLE `afvp_site`.`member`
+ALTER TABLE `afvp_site`.`members`
   ADD INDEX `memb_email_idx` (`email` ASC);
 
-ALTER TABLE `afvp_site`.`category`
+ALTER TABLE `afvp_site`.`categories`
   ADD INDEX `fk_cate_member_id_idx` (`member_id` ASC);
 
-ALTER TABLE `afvp_site`.`category`
+ALTER TABLE `afvp_site`.`categories`
   ADD INDEX `cate_name_idx` (`name` ASC);
 
-ALTER TABLE `afvp_site`.`post`
+ALTER TABLE `afvp_site`.`posts`
   ADD INDEX `fk_post_member_id_idx` (`member_id` ASC);
 
-ALTER TABLE `afvp_site`.`post`
+ALTER TABLE `afvp_site`.`posts`
   ADD INDEX `fk_post_parent_id_idx` (`parent_id` ASC);
 
-ALTER TABLE `afvp_site`.`post`
+ALTER TABLE `afvp_site`.`posts`
   ADD INDEX `fk_post_category_id_idx` (`category_id` ASC);
 
-ALTER TABLE `afvp_site`.`post`
+ALTER TABLE `afvp_site`.`posts`
   ADD INDEX `post_title_idx` (`title` ASC);
 
-ALTER TABLE `afvp_site`.`post`
+ALTER TABLE `afvp_site`.`posts`
   ADD INDEX `post_datetime_idx` (`datetime` ASC);
 
-ALTER TABLE `afvp_site`.`donation`
+ALTER TABLE `afvp_site`.`donations`
   ADD INDEX `fk_dona_donor_id_idx` (`donor_id` ASC);
 
-ALTER TABLE `afvp_site`.`donation`
+ALTER TABLE `afvp_site`.`donations`
   ADD INDEX `fk_dona_member_id_idx` (`donor_id` ASC);
 
-ALTER TABLE `afvp_site`.`donation`
+ALTER TABLE `afvp_site`.`donations`
   ADD INDEX `fk_dona_paym_id_idx` (`payment_type_id` ASC);
 
-ALTER TABLE `afvp_site`.`donor`
+ALTER TABLE `afvp_site`.`donors`
   ADD INDEX `fk_dono_role_id_idx` (`role_id` ASC);
 
-ALTER TABLE `afvp_site`.`donor`
+ALTER TABLE `afvp_site`.`donors`
   ADD INDEX `dono_name_idx` (`family_name` ASC, `first_name` ASC);
 
-ALTER TABLE `afvp_site`.`donor`
+ALTER TABLE `afvp_site`.`donors`
   ADD INDEX `dono_email_idx` (`email` ASC);
 
 -- -----------------------------------------------------
 -- Foreign Keys creation
 -- -----------------------------------------------------
-ALTER TABLE `afvp_site`.`member`
-  ADD CONSTRAINT `fk_memb_role_id_idx` FOREIGN KEY (`role_id`) REFERENCES `afvp_site`.`role` (`id`) ON DELETE CASCADE  ON UPDATE CASCADE;
+ALTER TABLE `afvp_site`.`members`
+  ADD CONSTRAINT `fk_memb_role_id_idx` FOREIGN KEY (`role_id`) REFERENCES `afvp_site`.`roles` (`id`) ON DELETE CASCADE  ON UPDATE CASCADE;
 
-ALTER TABLE `afvp_site`.`member`
-  ADD CONSTRAINT `fk_memb_subscription_id_idx` FOREIGN KEY (`subscription_id`) REFERENCES `afvp_site`.`subscription` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `afvp_site`.`members`
+  ADD CONSTRAINT `fk_memb_subscriptiontype_id_idx` FOREIGN KEY (`subscriptiontype_id`) REFERENCES `afvp_site`.`subscription-types` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `afvp_site`.`category`
-  ADD CONSTRAINT `fk_cate_member_id_idx` FOREIGN KEY (`member_id`) REFERENCES `afvp_site`.`member` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `afvp_site`.`subscriptions`
+  ADD CONSTRAINT `fk_subs_member_id_idx` FOREIGN KEY (`member_id`) REFERENCES `afvp_site`.`members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `afvp_site`.`post`
-  ADD CONSTRAINT `fk_post_category_id_idx` FOREIGN KEY (`category_id`) REFERENCES `afvp_site`.`category` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `afvp_site`.`subscriptions`
+  ADD CONSTRAINT `fk_subs_subscriptiontype_id_idx` FOREIGN KEY (`subscriptiontype_id`) REFERENCES `afvp_site`.`subscription-types` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `afvp_site`.`post`
-  ADD CONSTRAINT `fk_post_member_id_idx` FOREIGN KEY (`member_id`) REFERENCES `afvp_site`.`member` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `afvp_site`.`post`
-  ADD CONSTRAINT `fk_post_parent_id_idx` FOREIGN KEY (`parent_id`) REFERENCES `afvp_site`.`post` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `afvp_site`.`categories`
+  ADD CONSTRAINT `fk_cate_member_id_idx` FOREIGN KEY (`member_id`) REFERENCES `afvp_site`.`members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `afvp_site`.`donation`
-  ADD CONSTRAINT `fk_dona_donor_id_idx` FOREIGN KEY (`donor_id`) REFERENCES `afvp_site`.`donor` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `afvp_site`.`posts`
+  ADD CONSTRAINT `fk_post_category_id_idx` FOREIGN KEY (`category_id`) REFERENCES `afvp_site`.`categories` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `afvp_site`.`donation`
-  ADD CONSTRAINT `fk_dona_member_id_idx` FOREIGN KEY (`member_id`) REFERENCES `afvp_site`.`member` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `afvp_site`.`posts`
+  ADD CONSTRAINT `fk_post_member_id_idx` FOREIGN KEY (`member_id`) REFERENCES `afvp_site`.`members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `afvp_site`.`donation`
-  ADD CONSTRAINT `fk_dona_paym_id_idx` FOREIGN KEY (`payment_type_id`) REFERENCES `afvp_site`.`payment_type` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `afvp_site`.`posts`
+  ADD CONSTRAINT `fk_post_parent_id_idx` FOREIGN KEY (`parent_id`) REFERENCES `afvp_site`.`posts` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE `afvp_site`.`donor`
-  ADD CONSTRAINT `fk_dono_role_id_idx` FOREIGN KEY (`role_id`) REFERENCES `afvp_site`.`role` (`id`) ON DELETE CASCADE  ON UPDATE CASCADE;
+ALTER TABLE `afvp_site`.`donations`
+  ADD CONSTRAINT `fk_dona_donor_id_idx` FOREIGN KEY (`donor_id`) REFERENCES `afvp_site`.`donors` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `afvp_site`.`donations`
+  ADD CONSTRAINT `fk_dona_member_id_idx` FOREIGN KEY (`member_id`) REFERENCES `afvp_site`.`members` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `afvp_site`.`donations`
+  ADD CONSTRAINT `fk_dona_paym_id_idx` FOREIGN KEY (`payment_type_id`) REFERENCES `afvp_site`.`payment_types` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `afvp_site`.`donors`
+  ADD CONSTRAINT `fk_dono_role_id_idx` FOREIGN KEY (`role_id`) REFERENCES `afvp_site`.`roles` (`id`) ON DELETE CASCADE  ON UPDATE CASCADE;
